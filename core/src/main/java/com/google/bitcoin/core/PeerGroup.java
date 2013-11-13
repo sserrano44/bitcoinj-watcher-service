@@ -20,6 +20,7 @@ package com.google.bitcoin.core;
 import com.google.bitcoin.core.Peer.PeerHandler;
 import com.google.bitcoin.discovery.PeerDiscovery;
 import com.google.bitcoin.discovery.PeerDiscoveryException;
+import com.google.bitcoin.script.Script;
 import com.google.bitcoin.utils.ListenerRegistration;
 import com.google.bitcoin.utils.Threading;
 import com.google.common.base.Preconditions;
@@ -131,6 +132,7 @@ public class PeerGroup extends AbstractIdleService implements TransactionBroadca
         private void onChanged() {
             recalculateFastCatchupAndFilter();
         }
+        @Override public void onScriptsAdded(Wallet wallet, List<Script> scripts) { onChanged(); }
         @Override public void onKeysAdded(Wallet wallet, List<ECKey> keys) { onChanged(); }
         @Override public void onCoinsReceived(Wallet wallet, Transaction tx, BigInteger prevBalance, BigInteger newBalance) { onChanged(); }
         @Override public void onCoinsSent(Wallet wallet, Transaction tx, BigInteger prevBalance, BigInteger newBalance) { onChanged(); }

@@ -5,6 +5,7 @@ import com.google.bitcoin.core.*;
 import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
 import com.google.bitcoin.params.MainNetParams;
 import com.google.bitcoin.params.UnitTestParams;
+import com.google.bitcoin.script.ScriptBuilder;
 import com.google.bitcoin.utils.BriefLogFormatter;
 import com.google.bitcoin.utils.TestUtils;
 import com.google.bitcoin.utils.Threading;
@@ -27,6 +28,7 @@ import static org.junit.Assert.*;
 public class WalletProtobufSerializerTest {
     static final NetworkParameters params = UnitTestParams.get();
     private ECKey myKey;
+    private ECKey myWatchedKey;
     private Address myAddress;
     private Wallet myWallet;
 
@@ -35,11 +37,13 @@ public class WalletProtobufSerializerTest {
     @Before
     public void setUp() throws Exception {
         BriefLogFormatter.initVerbose();
+        myWatchedKey = new ECKey();
         myKey = new ECKey();
         myKey.setCreationTimeSeconds(123456789L);
         myAddress = myKey.toAddress(params);
         myWallet = new Wallet(params);
         myWallet.addKey(myKey);
+        myWallet.addWatchedAddress(myWatchedKey.toAddress(params));
         myWallet.setDescription(WALLET_DESCRIPTION);
     }
 
@@ -55,6 +59,9 @@ public class WalletProtobufSerializerTest {
                 wallet1.findKeyFromPubHash(myKey.getPubKeyHash()).getPrivKeyBytes());
         assertEquals(myKey.getCreationTimeSeconds(),
                 wallet1.findKeyFromPubHash(myKey.getPubKeyHash()).getCreationTimeSeconds());
+        assertEquals(1, wallet1.getWatchedScripts().size());
+        assertEquals(ScriptBuilder.createOutputScript(myWatchedKey.toAddress(params)),
+                wallet1.getWatchedScripts().get(0));
         assertEquals(WALLET_DESCRIPTION, wallet1.getDescription());
     }
 

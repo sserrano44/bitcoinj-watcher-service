@@ -257,6 +257,7 @@ message Wallet {
 
   repeated Key key = 3;
   repeated Transaction transaction = 4;
+  repeated bytes watchedScript = 15;
 
   optional EncryptionType encryption_type = 5 [default=UNENCRYPTED];
   optional ScryptParameters encryption_parameters = 6;
@@ -280,5 +281,5 @@ message Wallet {
   // can be used to recover a compromised wallet, or just as part of preventative defence-in-depth measures.
   optional uint64 key_rotation_time = 13;
 
-  // Next tag: 15
+  // Next tag: 16
 }
