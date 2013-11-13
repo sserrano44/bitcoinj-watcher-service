@@ -3,6 +3,7 @@ package org.gitian.bitcoin.resources;
 /**
  * @author devrandom
  */
+
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.AddressFormatException;
 import com.google.bitcoin.core.ECKey;
@@ -18,18 +19,20 @@ import com.google.common.collect.Lists;
 import com.yammer.metrics.annotation.Timed;
 
 import org.gitian.bitcoin.core.Balance;
+import org.gitian.bitcoin.core.ListeningAddress;
 import org.gitian.bitcoin.core.TxOut;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
 
 import java.math.BigInteger;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 
 @Path("/address")
 @Produces(MediaType.APPLICATION_JSON)
@@ -71,10 +74,10 @@ public class AddressResource {
         return wallet.addKey(key);
     }
 
-    @GET @Path("/{address}/add")
+    @PUT @Path("/")
     @Timed
-    public boolean add(@PathParam("address")String address) throws AddressFormatException {
-        byte[] pubKeyHash = new Address(wallet.getNetworkParameters(), address).getHash160();
+    public boolean add(ListeningAddress listen) throws AddressFormatException {
+        byte[] pubKeyHash = new Address(wallet.getNetworkParameters(), listen.getAddress()).getHash160();
         ECKey key = new ECKey(pubKeyHash);
         key.setCreationTimeSeconds(System.currentTimeMillis()/1000 - DEFAULT_LOOKBACK_SECONDS);
         return wallet.addKey(key);
