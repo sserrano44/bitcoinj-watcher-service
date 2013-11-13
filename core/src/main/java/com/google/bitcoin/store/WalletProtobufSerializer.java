@@ -123,7 +123,7 @@ public class WalletProtobufSerializer {
             Protos.Key.Builder keyBuilder = Protos.Key.newBuilder().setCreationTimestamp(key.getCreationTimeSeconds() * 1000)
                                                          // .setLabel() TODO
                                                             .setType(Protos.Key.Type.ORIGINAL);
-            if (key.getPrivKeyBytes() != null)
+            if (!key.isPubKeyOnly())
                 keyBuilder.setPrivateKey(ByteString.copyFrom(key.getPrivKeyBytes()));
 
             EncryptedPrivateKey encryptedPrivateKey = key.getEncryptedPrivateKey();
@@ -150,7 +150,10 @@ public class WalletProtobufSerializer {
             // We serialize the public key even if the private key is present for speed reasons: we don't want to do
             // lots of slow EC math to load the wallet, we prefer to store the redundant data instead. It matters more
             // on mobile platforms.
-            keyBuilder.setPublicKey(ByteString.copyFrom(key.getPubKey()));
+            if (key.isPubKeyHashOnly())
+                keyBuilder.setPublicKeyHash(ByteString.copyFrom(key.getPubKeyHash()));
+            else
+                keyBuilder.setPublicKey(ByteString.copyFrom(key.getPubKey()));
             walletBuilder.addKey(keyBuilder);
         }
 
@@ -395,9 +398,12 @@ public class WalletProtobufSerializer {
             if (keyCrypter != null && keyCrypter.getUnderstoodEncryptionType() != EncryptionType.UNENCRYPTED) {
                 // If the key is encrypted construct an ECKey using the encrypted private key bytes.
                 ecKey = new ECKey(encryptedPrivateKey, pubKey, keyCrypter);
-            } else {
+            } else if (pubKey != null) {
                 // Construct an unencrypted private key.
                 ecKey = new ECKey(privKey, pubKey);
+            } else {
+                // If the pubKey is null, we must have a hash
+                ecKey = new ECKey(keyProto.getPublicKeyHash().toByteArray());
             }
             ecKey.setCreationTimeSeconds((keyProto.getCreationTimestamp() + 500) / 1000);
             wallet.addKey(ecKey);

@@ -1249,6 +1249,24 @@ public final class Protos {
      */
     com.google.protobuf.ByteString getPublicKey();
 
+    // optional bytes public_key_hash = 7;
+    /**
+     * <code>optional bytes public_key_hash = 7;</code>
+     *
+     * <pre>
+     * If this is an address-only listening key, this will be present and public_key will be absent.
+     * </pre>
+     */
+    boolean hasPublicKeyHash();
+    /**
+     * <code>optional bytes public_key_hash = 7;</code>
+     *
+     * <pre>
+     * If this is an address-only listening key, this will be present and public_key will be absent.
+     * </pre>
+     */
+    com.google.protobuf.ByteString getPublicKeyHash();
+
     // optional string label = 4;
     /**
      * <code>optional string label = 4;</code>
@@ -1378,12 +1396,12 @@ public final class Protos {
               break;
             }
             case 34: {
-              bitField0_ |= 0x00000010;
+              bitField0_ |= 0x00000020;
               label_ = input.readBytes();
               break;
             }
             case 40: {
-              bitField0_ |= 0x00000020;
+              bitField0_ |= 0x00000040;
               creationTimestamp_ = input.readInt64();
               break;
             }
@@ -1398,6 +1416,11 @@ public final class Protos {
                 encryptedPrivateKey_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000004;
+              break;
+            }
+            case 58: {
+              bitField0_ |= 0x00000010;
+              publicKeyHash_ = input.readBytes();
               break;
             }
           }
@@ -1644,6 +1667,30 @@ public final class Protos {
       return publicKey_;
     }
 
+    // optional bytes public_key_hash = 7;
+    public static final int PUBLIC_KEY_HASH_FIELD_NUMBER = 7;
+    private com.google.protobuf.ByteString publicKeyHash_;
+    /**
+     * <code>optional bytes public_key_hash = 7;</code>
+     *
+     * <pre>
+     * If this is an address-only listening key, this will be present and public_key will be absent.
+     * </pre>
+     */
+    public boolean hasPublicKeyHash() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional bytes public_key_hash = 7;</code>
+     *
+     * <pre>
+     * If this is an address-only listening key, this will be present and public_key will be absent.
+     * </pre>
+     */
+    public com.google.protobuf.ByteString getPublicKeyHash() {
+      return publicKeyHash_;
+    }
+
     // optional string label = 4;
     public static final int LABEL_FIELD_NUMBER = 4;
     private java.lang.Object label_;
@@ -1655,7 +1702,7 @@ public final class Protos {
      * </pre>
      */
     public boolean hasLabel() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+      return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
      * <code>optional string label = 4;</code>
@@ -1710,7 +1757,7 @@ public final class Protos {
      * </pre>
      */
     public boolean hasCreationTimestamp() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+      return ((bitField0_ & 0x00000040) == 0x00000040);
     }
     /**
      * <code>optional int64 creation_timestamp = 5;</code>
@@ -1728,6 +1775,7 @@ public final class Protos {
       privateKey_ = com.google.protobuf.ByteString.EMPTY;
       encryptedPrivateKey_ = org.bitcoinj.wallet.Protos.EncryptedPrivateKey.getDefaultInstance();
       publicKey_ = com.google.protobuf.ByteString.EMPTY;
+      publicKeyHash_ = com.google.protobuf.ByteString.EMPTY;
       label_ = "";
       creationTimestamp_ = 0L;
     }
@@ -1762,14 +1810,17 @@ public final class Protos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeBytes(3, publicKey_);
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeBytes(4, getLabelBytes());
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeInt64(5, creationTimestamp_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeMessage(6, encryptedPrivateKey_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(7, publicKeyHash_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -1792,17 +1843,21 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(3, publicKey_);
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(4, getLabelBytes());
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(5, creationTimestamp_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(6, encryptedPrivateKey_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(7, publicKeyHash_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1944,10 +1999,12 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000004);
         publicKey_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000008);
-        label_ = "";
+        publicKeyHash_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000010);
-        creationTimestamp_ = 0L;
+        label_ = "";
         bitField0_ = (bitField0_ & ~0x00000020);
+        creationTimestamp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -1999,9 +2056,13 @@ public final class Protos {
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000010;
         }
-        result.label_ = label_;
+        result.publicKeyHash_ = publicKeyHash_;
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000020;
+        }
+        result.label_ = label_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
         }
         result.creationTimestamp_ = creationTimestamp_;
         result.bitField0_ = to_bitField0_;
@@ -2032,8 +2093,11 @@ public final class Protos {
         if (other.hasPublicKey()) {
           setPublicKey(other.getPublicKey());
         }
+        if (other.hasPublicKeyHash()) {
+          setPublicKeyHash(other.getPublicKeyHash());
+        }
         if (other.hasLabel()) {
-          bitField0_ |= 0x00000010;
+          bitField0_ |= 0x00000020;
           label_ = other.label_;
           onChanged();
         }
@@ -2392,6 +2456,58 @@ public final class Protos {
         return this;
       }
 
+      // optional bytes public_key_hash = 7;
+      private com.google.protobuf.ByteString publicKeyHash_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes public_key_hash = 7;</code>
+       *
+       * <pre>
+       * If this is an address-only listening key, this will be present and public_key will be absent.
+       * </pre>
+       */
+      public boolean hasPublicKeyHash() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional bytes public_key_hash = 7;</code>
+       *
+       * <pre>
+       * If this is an address-only listening key, this will be present and public_key will be absent.
+       * </pre>
+       */
+      public com.google.protobuf.ByteString getPublicKeyHash() {
+        return publicKeyHash_;
+      }
+      /**
+       * <code>optional bytes public_key_hash = 7;</code>
+       *
+       * <pre>
+       * If this is an address-only listening key, this will be present and public_key will be absent.
+       * </pre>
+       */
+      public Builder setPublicKeyHash(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        publicKeyHash_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes public_key_hash = 7;</code>
+       *
+       * <pre>
+       * If this is an address-only listening key, this will be present and public_key will be absent.
+       * </pre>
+       */
+      public Builder clearPublicKeyHash() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        publicKeyHash_ = getDefaultInstance().getPublicKeyHash();
+        onChanged();
+        return this;
+      }
+
       // optional string label = 4;
       private java.lang.Object label_ = "";
       /**
@@ -2402,7 +2518,7 @@ public final class Protos {
        * </pre>
        */
       public boolean hasLabel() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
        * <code>optional string label = 4;</code>
@@ -2454,7 +2570,7 @@ public final class Protos {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000010;
+  bitField0_ |= 0x00000020;
         label_ = value;
         onChanged();
         return this;
@@ -2467,7 +2583,7 @@ public final class Protos {
        * </pre>
        */
       public Builder clearLabel() {
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000020);
         label_ = getDefaultInstance().getLabel();
         onChanged();
         return this;
@@ -2484,7 +2600,7 @@ public final class Protos {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000010;
+  bitField0_ |= 0x00000020;
         label_ = value;
         onChanged();
         return this;
@@ -2500,7 +2616,7 @@ public final class Protos {
        * </pre>
        */
       public boolean hasCreationTimestamp() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+        return ((bitField0_ & 0x00000040) == 0x00000040);
       }
       /**
        * <code>optional int64 creation_timestamp = 5;</code>
@@ -2520,7 +2636,7 @@ public final class Protos {
        * </pre>
        */
       public Builder setCreationTimestamp(long value) {
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000040;
         creationTimestamp_ = value;
         onChanged();
         return this;
@@ -2533,7 +2649,7 @@ public final class Protos {
        * </pre>
        */
       public Builder clearCreationTimestamp() {
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000040);
         creationTimestamp_ = 0L;
         onChanged();
         return this;
@@ -12883,60 +12999,60 @@ public final class Protos {
       "\n\nip_address\030\001 \002(\014\022\014\n\004port\030\002 \002(\r\022\020\n\010serv" +
       "ices\030\003 \002(\004\"S\n\023EncryptedPrivateKey\022\035\n\025ini" +
       "tialisation_vector\030\001 \002(\014\022\035\n\025encrypted_pr" +
-      "ivate_key\030\002 \002(\014\"\345\001\n\003Key\022\036\n\004type\030\001 \002(\0162\020." +
+      "ivate_key\030\002 \002(\014\"\376\001\n\003Key\022\036\n\004type\030\001 \002(\0162\020." +
       "wallet.Key.Type\022\023\n\013private_key\030\002 \001(\014\022:\n\025" +
       "encrypted_private_key\030\006 \001(\0132\033.wallet.Enc" +
-      "ryptedPrivateKey\022\022\n\npublic_key\030\003 \001(\014\022\r\n\005" +
-      "label\030\004 \001(\t\022\032\n\022creation_timestamp\030\005 \001(\003\"" +
-      ".\n\004Type\022\014\n\010ORIGINAL\020\001\022\030\n\024ENCRYPTED_SCRYP",
-      "T_AES\020\002\"\203\001\n\020TransactionInput\022\"\n\032transact" +
-      "ion_out_point_hash\030\001 \002(\014\022#\n\033transaction_" +
-      "out_point_index\030\002 \002(\r\022\024\n\014script_bytes\030\003 " +
-      "\002(\014\022\020\n\010sequence\030\004 \001(\r\"\177\n\021TransactionOutp" +
-      "ut\022\r\n\005value\030\001 \002(\003\022\024\n\014script_bytes\030\002 \002(\014\022" +
-      "!\n\031spent_by_transaction_hash\030\003 \001(\014\022\"\n\032sp" +
-      "ent_by_transaction_index\030\004 \001(\005\"\234\003\n\025Trans" +
-      "actionConfidence\0220\n\004type\030\001 \001(\0162\".wallet." +
-      "TransactionConfidence.Type\022\032\n\022appeared_a" +
-      "t_height\030\002 \001(\005\022\036\n\026overriding_transaction",
-      "\030\003 \001(\014\022\r\n\005depth\030\004 \001(\005\022\021\n\twork_done\030\005 \001(\003" +
-      "\022)\n\014broadcast_by\030\006 \003(\0132\023.wallet.PeerAddr" +
-      "ess\0224\n\006source\030\007 \001(\0162$.wallet.Transaction" +
-      "Confidence.Source\"O\n\004Type\022\013\n\007UNKNOWN\020\000\022\014" +
-      "\n\010BUILDING\020\001\022\013\n\007PENDING\020\002\022\025\n\021NOT_IN_BEST" +
-      "_CHAIN\020\003\022\010\n\004DEAD\020\004\"A\n\006Source\022\022\n\016SOURCE_U" +
-      "NKNOWN\020\000\022\022\n\016SOURCE_NETWORK\020\001\022\017\n\013SOURCE_S" +
-      "ELF\020\002\"\236\004\n\013Transaction\022\017\n\007version\030\001 \002(\005\022\014" +
-      "\n\004hash\030\002 \002(\014\022&\n\004pool\030\003 \001(\0162\030.wallet.Tran" +
-      "saction.Pool\022\021\n\tlock_time\030\004 \001(\r\022\022\n\nupdat",
-      "ed_at\030\005 \001(\003\0223\n\021transaction_input\030\006 \003(\0132\030" +
-      ".wallet.TransactionInput\0225\n\022transaction_" +
-      "output\030\007 \003(\0132\031.wallet.TransactionOutput\022" +
-      "\022\n\nblock_hash\030\010 \003(\014\022 \n\030block_relativity_" +
-      "offsets\030\013 \003(\005\0221\n\nconfidence\030\t \001(\0132\035.wall" +
-      "et.TransactionConfidence\0225\n\007purpose\030\n \001(" +
-      "\0162\033.wallet.Transaction.Purpose:\007UNKNOWN\"" +
-      "Y\n\004Pool\022\013\n\007UNSPENT\020\004\022\t\n\005SPENT\020\005\022\014\n\010INACT" +
-      "IVE\020\002\022\010\n\004DEAD\020\n\022\013\n\007PENDING\020\020\022\024\n\020PENDING_" +
-      "INACTIVE\020\022\":\n\007Purpose\022\013\n\007UNKNOWN\020\000\022\020\n\014US",
-      "ER_PAYMENT\020\001\022\020\n\014KEY_ROTATION\020\002\"N\n\020Scrypt" +
-      "Parameters\022\014\n\004salt\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\005163" +
-      "84\022\014\n\001r\030\003 \001(\005:\0018\022\014\n\001p\030\004 \001(\005:\0011\"8\n\tExtens" +
-      "ion\022\n\n\002id\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\022\021\n\tmandato" +
-      "ry\030\003 \002(\010\"\353\003\n\006Wallet\022\032\n\022network_identifie" +
-      "r\030\001 \002(\t\022\034\n\024last_seen_block_hash\030\002 \001(\014\022\036\n" +
-      "\026last_seen_block_height\030\014 \001(\r\022!\n\031last_se" +
-      "en_block_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013." +
-      "wallet.Key\022(\n\013transaction\030\004 \003(\0132\023.wallet" +
-      ".Transaction\022C\n\017encryption_type\030\005 \001(\0162\035.",
-      "wallet.Wallet.EncryptionType:\013UNENCRYPTE" +
-      "D\0227\n\025encryption_parameters\030\006 \001(\0132\030.walle" +
-      "t.ScryptParameters\022\017\n\007version\030\007 \001(\005\022$\n\te" +
-      "xtension\030\n \003(\0132\021.wallet.Extension\022\023\n\013des" +
-      "cription\030\013 \001(\t\022\031\n\021key_rotation_time\030\r \001(" +
-      "\004\";\n\016EncryptionType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024" +
-      "ENCRYPTED_SCRYPT_AES\020\002B\035\n\023org.bitcoinj.w" +
-      "alletB\006Protos"
+      "ryptedPrivateKey\022\022\n\npublic_key\030\003 \001(\014\022\027\n\017" +
+      "public_key_hash\030\007 \001(\014\022\r\n\005label\030\004 \001(\t\022\032\n\022" +
+      "creation_timestamp\030\005 \001(\003\".\n\004Type\022\014\n\010ORIG",
+      "INAL\020\001\022\030\n\024ENCRYPTED_SCRYPT_AES\020\002\"\203\001\n\020Tra" +
+      "nsactionInput\022\"\n\032transaction_out_point_h" +
+      "ash\030\001 \002(\014\022#\n\033transaction_out_point_index" +
+      "\030\002 \002(\r\022\024\n\014script_bytes\030\003 \002(\014\022\020\n\010sequence" +
+      "\030\004 \001(\r\"\177\n\021TransactionOutput\022\r\n\005value\030\001 \002" +
+      "(\003\022\024\n\014script_bytes\030\002 \002(\014\022!\n\031spent_by_tra" +
+      "nsaction_hash\030\003 \001(\014\022\"\n\032spent_by_transact" +
+      "ion_index\030\004 \001(\005\"\234\003\n\025TransactionConfidenc" +
+      "e\0220\n\004type\030\001 \001(\0162\".wallet.TransactionConf" +
+      "idence.Type\022\032\n\022appeared_at_height\030\002 \001(\005\022",
+      "\036\n\026overriding_transaction\030\003 \001(\014\022\r\n\005depth" +
+      "\030\004 \001(\005\022\021\n\twork_done\030\005 \001(\003\022)\n\014broadcast_b" +
+      "y\030\006 \003(\0132\023.wallet.PeerAddress\0224\n\006source\030\007" +
+      " \001(\0162$.wallet.TransactionConfidence.Sour" +
+      "ce\"O\n\004Type\022\013\n\007UNKNOWN\020\000\022\014\n\010BUILDING\020\001\022\013\n" +
+      "\007PENDING\020\002\022\025\n\021NOT_IN_BEST_CHAIN\020\003\022\010\n\004DEA" +
+      "D\020\004\"A\n\006Source\022\022\n\016SOURCE_UNKNOWN\020\000\022\022\n\016SOU" +
+      "RCE_NETWORK\020\001\022\017\n\013SOURCE_SELF\020\002\"\236\004\n\013Trans" +
+      "action\022\017\n\007version\030\001 \002(\005\022\014\n\004hash\030\002 \002(\014\022&\n" +
+      "\004pool\030\003 \001(\0162\030.wallet.Transaction.Pool\022\021\n",
+      "\tlock_time\030\004 \001(\r\022\022\n\nupdated_at\030\005 \001(\003\0223\n\021" +
+      "transaction_input\030\006 \003(\0132\030.wallet.Transac" +
+      "tionInput\0225\n\022transaction_output\030\007 \003(\0132\031." +
+      "wallet.TransactionOutput\022\022\n\nblock_hash\030\010" +
+      " \003(\014\022 \n\030block_relativity_offsets\030\013 \003(\005\0221" +
+      "\n\nconfidence\030\t \001(\0132\035.wallet.TransactionC" +
+      "onfidence\0225\n\007purpose\030\n \001(\0162\033.wallet.Tran" +
+      "saction.Purpose:\007UNKNOWN\"Y\n\004Pool\022\013\n\007UNSP" +
+      "ENT\020\004\022\t\n\005SPENT\020\005\022\014\n\010INACTIVE\020\002\022\010\n\004DEAD\020\n" +
+      "\022\013\n\007PENDING\020\020\022\024\n\020PENDING_INACTIVE\020\022\":\n\007P",
+      "urpose\022\013\n\007UNKNOWN\020\000\022\020\n\014USER_PAYMENT\020\001\022\020\n" +
+      "\014KEY_ROTATION\020\002\"N\n\020ScryptParameters\022\014\n\004s" +
+      "alt\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\00516384\022\014\n\001r\030\003 \001(\005:\001" +
+      "8\022\014\n\001p\030\004 \001(\005:\0011\"8\n\tExtension\022\n\n\002id\030\001 \002(\t" +
+      "\022\014\n\004data\030\002 \002(\014\022\021\n\tmandatory\030\003 \002(\010\"\353\003\n\006Wa" +
+      "llet\022\032\n\022network_identifier\030\001 \002(\t\022\034\n\024last" +
+      "_seen_block_hash\030\002 \001(\014\022\036\n\026last_seen_bloc" +
+      "k_height\030\014 \001(\r\022!\n\031last_seen_block_time_s" +
+      "ecs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013.wallet.Key\022(\n\013t" +
+      "ransaction\030\004 \003(\0132\023.wallet.Transaction\022C\n",
+      "\017encryption_type\030\005 \001(\0162\035.wallet.Wallet.E" +
+      "ncryptionType:\013UNENCRYPTED\0227\n\025encryption" +
+      "_parameters\030\006 \001(\0132\030.wallet.ScryptParamet" +
+      "ers\022\017\n\007version\030\007 \001(\005\022$\n\textension\030\n \003(\0132" +
+      "\021.wallet.Extension\022\023\n\013description\030\013 \001(\t\022" +
+      "\031\n\021key_rotation_time\030\r \001(\004\";\n\016Encryption" +
+      "Type\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRYPTED_SCRYP" +
+      "T_AES\020\002B\035\n\023org.bitcoinj.walletB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -12960,7 +13076,7 @@ public final class Protos {
           internal_static_wallet_Key_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_wallet_Key_descriptor,
-              new java.lang.String[] { "Type", "PrivateKey", "EncryptedPrivateKey", "PublicKey", "Label", "CreationTimestamp", });
+              new java.lang.String[] { "Type", "PrivateKey", "EncryptedPrivateKey", "PublicKey", "PublicKeyHash", "Label", "CreationTimestamp", });
           internal_static_wallet_TransactionInput_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_wallet_TransactionInput_fieldAccessorTable = new

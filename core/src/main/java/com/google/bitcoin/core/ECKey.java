@@ -160,6 +160,10 @@ public class ECKey implements Serializable {
         this(privKeyBytes == null ? null : new BigInteger(1, privKeyBytes), pubKey);
     }
 
+    public ECKey(byte[] pubKeyHash) {
+        this.pubKeyHash = pubKeyHash;
+    }
+
     /**
      * Create a new ECKey with an encrypted private key, a public key and a KeyCrypter.
      *
@@ -203,6 +207,10 @@ public class ECKey implements Serializable {
      */
     private ECKey(BigInteger privKey, byte[] pubKey) {
         this(privKey, pubKey, false);
+    }
+
+    public boolean isPubKeyHashOnly() {
+        return pub == null;
     }
 
     public boolean isPubKeyOnly() {
@@ -274,7 +282,11 @@ public class ECKey implements Serializable {
 
     public String toString() {
         StringBuilder b = new StringBuilder();
-        b.append("pub:").append(Utils.bytesToHexString(pub));
+        if (pub == null)
+            b.append("hash:").append(Utils.bytesToHexString(pubKeyHash));
+        else
+            b.append("pub:").append(Utils.bytesToHexString(pub));
+
         if (creationTimeSeconds != 0) {
             b.append(" timestamp:").append(creationTimeSeconds);
         }

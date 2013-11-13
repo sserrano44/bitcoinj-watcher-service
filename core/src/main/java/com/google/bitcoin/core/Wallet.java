@@ -2057,7 +2057,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         lock.lock();
         try {
             for (ECKey key : keychain) {
-                if (Arrays.equals(key.getPubKey(), pubkey)) return key;
+                if (!key.isPubKeyHashOnly() && Arrays.equals(key.getPubKey(), pubkey)) return key;
             }
             return null;
         } finally {
@@ -2867,7 +2867,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         lock.lock();
         try {
             for (ECKey key : keychain) {
-                filter.insert(key.getPubKey());
+                if (!key.isPubKeyHashOnly())
+                    filter.insert(key.getPubKey());
                 filter.insert(key.getPubKeyHash());
             }
         } finally {
