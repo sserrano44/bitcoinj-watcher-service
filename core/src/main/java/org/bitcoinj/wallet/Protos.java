@@ -10124,6 +10124,20 @@ public final class Protos {
     org.bitcoinj.wallet.Protos.TransactionOrBuilder getTransactionOrBuilder(
         int index);
 
+    // repeated bytes watchedScript = 15;
+    /**
+     * <code>repeated bytes watchedScript = 15;</code>
+     */
+    java.util.List<com.google.protobuf.ByteString> getWatchedScriptList();
+    /**
+     * <code>repeated bytes watchedScript = 15;</code>
+     */
+    int getWatchedScriptCount();
+    /**
+     * <code>repeated bytes watchedScript = 15;</code>
+     */
+    com.google.protobuf.ByteString getWatchedScript(int index);
+
     // optional .wallet.Wallet.EncryptionType encryption_type = 5 [default = UNENCRYPTED];
     /**
      * <code>optional .wallet.Wallet.EncryptionType encryption_type = 5 [default = UNENCRYPTED];</code>
@@ -10353,9 +10367,9 @@ public final class Protos {
               break;
             }
             case 82: {
-              if (!((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
+              if (!((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
                 extension_ = new java.util.ArrayList<org.bitcoinj.wallet.Protos.Extension>();
-                mutable_bitField0_ |= 0x00000200;
+                mutable_bitField0_ |= 0x00000400;
               }
               extension_.add(input.readMessage(org.bitcoinj.wallet.Protos.Extension.PARSER, extensionRegistry));
               break;
@@ -10380,6 +10394,14 @@ public final class Protos {
               lastSeenBlockTimeSecs_ = input.readInt64();
               break;
             }
+            case 122: {
+              if (!((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
+                watchedScript_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+                mutable_bitField0_ |= 0x00000040;
+              }
+              watchedScript_.add(input.readBytes());
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -10394,8 +10416,11 @@ public final class Protos {
         if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
           transaction_ = java.util.Collections.unmodifiableList(transaction_);
         }
-        if (((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
+        if (((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
           extension_ = java.util.Collections.unmodifiableList(extension_);
+        }
+        if (((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
+          watchedScript_ = java.util.Collections.unmodifiableList(watchedScript_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -10727,6 +10752,29 @@ public final class Protos {
       return transaction_.get(index);
     }
 
+    // repeated bytes watchedScript = 15;
+    public static final int WATCHEDSCRIPT_FIELD_NUMBER = 15;
+    private java.util.List<com.google.protobuf.ByteString> watchedScript_;
+    /**
+     * <code>repeated bytes watchedScript = 15;</code>
+     */
+    public java.util.List<com.google.protobuf.ByteString>
+        getWatchedScriptList() {
+      return watchedScript_;
+    }
+    /**
+     * <code>repeated bytes watchedScript = 15;</code>
+     */
+    public int getWatchedScriptCount() {
+      return watchedScript_.size();
+    }
+    /**
+     * <code>repeated bytes watchedScript = 15;</code>
+     */
+    public com.google.protobuf.ByteString getWatchedScript(int index) {
+      return watchedScript_.get(index);
+    }
+
     // optional .wallet.Wallet.EncryptionType encryption_type = 5 [default = UNENCRYPTED];
     public static final int ENCRYPTION_TYPE_FIELD_NUMBER = 5;
     private org.bitcoinj.wallet.Protos.Wallet.EncryptionType encryptionType_;
@@ -10917,6 +10965,7 @@ public final class Protos {
       lastSeenBlockTimeSecs_ = 0L;
       key_ = java.util.Collections.emptyList();
       transaction_ = java.util.Collections.emptyList();
+      watchedScript_ = java.util.Collections.emptyList();
       encryptionType_ = org.bitcoinj.wallet.Protos.Wallet.EncryptionType.UNENCRYPTED;
       encryptionParameters_ = org.bitcoinj.wallet.Protos.ScryptParameters.getDefaultInstance();
       version_ = 0;
@@ -11000,6 +11049,9 @@ public final class Protos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeInt64(14, lastSeenBlockTimeSecs_);
       }
+      for (int i = 0; i < watchedScript_.size(); i++) {
+        output.writeBytes(15, watchedScript_.get(i));
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -11056,6 +11108,15 @@ public final class Protos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(14, lastSeenBlockTimeSecs_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < watchedScript_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(watchedScript_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getWatchedScriptList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -11201,26 +11262,28 @@ public final class Protos {
         } else {
           transactionBuilder_.clear();
         }
-        encryptionType_ = org.bitcoinj.wallet.Protos.Wallet.EncryptionType.UNENCRYPTED;
+        watchedScript_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000040);
+        encryptionType_ = org.bitcoinj.wallet.Protos.Wallet.EncryptionType.UNENCRYPTED;
+        bitField0_ = (bitField0_ & ~0x00000080);
         if (encryptionParametersBuilder_ == null) {
           encryptionParameters_ = org.bitcoinj.wallet.Protos.ScryptParameters.getDefaultInstance();
         } else {
           encryptionParametersBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000080);
-        version_ = 0;
         bitField0_ = (bitField0_ & ~0x00000100);
+        version_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000200);
         if (extensionBuilder_ == null) {
           extension_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000200);
+          bitField0_ = (bitField0_ & ~0x00000400);
         } else {
           extensionBuilder_.clear();
         }
         description_ = "";
-        bitField0_ = (bitField0_ & ~0x00000400);
-        keyRotationTime_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000800);
+        keyRotationTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00001000);
         return this;
       }
 
@@ -11283,11 +11346,16 @@ public final class Protos {
         } else {
           result.transaction_ = transactionBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+        if (((bitField0_ & 0x00000040) == 0x00000040)) {
+          watchedScript_ = java.util.Collections.unmodifiableList(watchedScript_);
+          bitField0_ = (bitField0_ & ~0x00000040);
+        }
+        result.watchedScript_ = watchedScript_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
           to_bitField0_ |= 0x00000010;
         }
         result.encryptionType_ = encryptionType_;
-        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
           to_bitField0_ |= 0x00000020;
         }
         if (encryptionParametersBuilder_ == null) {
@@ -11295,24 +11363,24 @@ public final class Protos {
         } else {
           result.encryptionParameters_ = encryptionParametersBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
           to_bitField0_ |= 0x00000040;
         }
         result.version_ = version_;
         if (extensionBuilder_ == null) {
-          if (((bitField0_ & 0x00000200) == 0x00000200)) {
+          if (((bitField0_ & 0x00000400) == 0x00000400)) {
             extension_ = java.util.Collections.unmodifiableList(extension_);
-            bitField0_ = (bitField0_ & ~0x00000200);
+            bitField0_ = (bitField0_ & ~0x00000400);
           }
           result.extension_ = extension_;
         } else {
           result.extension_ = extensionBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+        if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
           to_bitField0_ |= 0x00000080;
         }
         result.description_ = description_;
-        if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
+        if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
           to_bitField0_ |= 0x00000100;
         }
         result.keyRotationTime_ = keyRotationTime_;
@@ -11398,6 +11466,16 @@ public final class Protos {
             }
           }
         }
+        if (!other.watchedScript_.isEmpty()) {
+          if (watchedScript_.isEmpty()) {
+            watchedScript_ = other.watchedScript_;
+            bitField0_ = (bitField0_ & ~0x00000040);
+          } else {
+            ensureWatchedScriptIsMutable();
+            watchedScript_.addAll(other.watchedScript_);
+          }
+          onChanged();
+        }
         if (other.hasEncryptionType()) {
           setEncryptionType(other.getEncryptionType());
         }
@@ -11411,7 +11489,7 @@ public final class Protos {
           if (!other.extension_.isEmpty()) {
             if (extension_.isEmpty()) {
               extension_ = other.extension_;
-              bitField0_ = (bitField0_ & ~0x00000200);
+              bitField0_ = (bitField0_ & ~0x00000400);
             } else {
               ensureExtensionIsMutable();
               extension_.addAll(other.extension_);
@@ -11424,7 +11502,7 @@ public final class Protos {
               extensionBuilder_.dispose();
               extensionBuilder_ = null;
               extension_ = other.extension_;
-              bitField0_ = (bitField0_ & ~0x00000200);
+              bitField0_ = (bitField0_ & ~0x00000400);
               extensionBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getExtensionFieldBuilder() : null;
@@ -11434,7 +11512,7 @@ public final class Protos {
           }
         }
         if (other.hasDescription()) {
-          bitField0_ |= 0x00000400;
+          bitField0_ |= 0x00000800;
           description_ = other.description_;
           onChanged();
         }
@@ -12208,13 +12286,85 @@ public final class Protos {
         return transactionBuilder_;
       }
 
+      // repeated bytes watchedScript = 15;
+      private java.util.List<com.google.protobuf.ByteString> watchedScript_ = java.util.Collections.emptyList();
+      private void ensureWatchedScriptIsMutable() {
+        if (!((bitField0_ & 0x00000040) == 0x00000040)) {
+          watchedScript_ = new java.util.ArrayList<com.google.protobuf.ByteString>(watchedScript_);
+          bitField0_ |= 0x00000040;
+         }
+      }
+      /**
+       * <code>repeated bytes watchedScript = 15;</code>
+       */
+      public java.util.List<com.google.protobuf.ByteString>
+          getWatchedScriptList() {
+        return java.util.Collections.unmodifiableList(watchedScript_);
+      }
+      /**
+       * <code>repeated bytes watchedScript = 15;</code>
+       */
+      public int getWatchedScriptCount() {
+        return watchedScript_.size();
+      }
+      /**
+       * <code>repeated bytes watchedScript = 15;</code>
+       */
+      public com.google.protobuf.ByteString getWatchedScript(int index) {
+        return watchedScript_.get(index);
+      }
+      /**
+       * <code>repeated bytes watchedScript = 15;</code>
+       */
+      public Builder setWatchedScript(
+          int index, com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureWatchedScriptIsMutable();
+        watchedScript_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes watchedScript = 15;</code>
+       */
+      public Builder addWatchedScript(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureWatchedScriptIsMutable();
+        watchedScript_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes watchedScript = 15;</code>
+       */
+      public Builder addAllWatchedScript(
+          java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
+        ensureWatchedScriptIsMutable();
+        super.addAll(values, watchedScript_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes watchedScript = 15;</code>
+       */
+      public Builder clearWatchedScript() {
+        watchedScript_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000040);
+        onChanged();
+        return this;
+      }
+
       // optional .wallet.Wallet.EncryptionType encryption_type = 5 [default = UNENCRYPTED];
       private org.bitcoinj.wallet.Protos.Wallet.EncryptionType encryptionType_ = org.bitcoinj.wallet.Protos.Wallet.EncryptionType.UNENCRYPTED;
       /**
        * <code>optional .wallet.Wallet.EncryptionType encryption_type = 5 [default = UNENCRYPTED];</code>
        */
       public boolean hasEncryptionType() {
-        return ((bitField0_ & 0x00000040) == 0x00000040);
+        return ((bitField0_ & 0x00000080) == 0x00000080);
       }
       /**
        * <code>optional .wallet.Wallet.EncryptionType encryption_type = 5 [default = UNENCRYPTED];</code>
@@ -12229,7 +12379,7 @@ public final class Protos {
         if (value == null) {
           throw new NullPointerException();
         }
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000080;
         encryptionType_ = value;
         onChanged();
         return this;
@@ -12238,7 +12388,7 @@ public final class Protos {
        * <code>optional .wallet.Wallet.EncryptionType encryption_type = 5 [default = UNENCRYPTED];</code>
        */
       public Builder clearEncryptionType() {
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = (bitField0_ & ~0x00000080);
         encryptionType_ = org.bitcoinj.wallet.Protos.Wallet.EncryptionType.UNENCRYPTED;
         onChanged();
         return this;
@@ -12252,7 +12402,7 @@ public final class Protos {
        * <code>optional .wallet.ScryptParameters encryption_parameters = 6;</code>
        */
       public boolean hasEncryptionParameters() {
-        return ((bitField0_ & 0x00000080) == 0x00000080);
+        return ((bitField0_ & 0x00000100) == 0x00000100);
       }
       /**
        * <code>optional .wallet.ScryptParameters encryption_parameters = 6;</code>
@@ -12277,7 +12427,7 @@ public final class Protos {
         } else {
           encryptionParametersBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000100;
         return this;
       }
       /**
@@ -12291,7 +12441,7 @@ public final class Protos {
         } else {
           encryptionParametersBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000100;
         return this;
       }
       /**
@@ -12299,7 +12449,7 @@ public final class Protos {
        */
       public Builder mergeEncryptionParameters(org.bitcoinj.wallet.Protos.ScryptParameters value) {
         if (encryptionParametersBuilder_ == null) {
-          if (((bitField0_ & 0x00000080) == 0x00000080) &&
+          if (((bitField0_ & 0x00000100) == 0x00000100) &&
               encryptionParameters_ != org.bitcoinj.wallet.Protos.ScryptParameters.getDefaultInstance()) {
             encryptionParameters_ =
               org.bitcoinj.wallet.Protos.ScryptParameters.newBuilder(encryptionParameters_).mergeFrom(value).buildPartial();
@@ -12310,7 +12460,7 @@ public final class Protos {
         } else {
           encryptionParametersBuilder_.mergeFrom(value);
         }
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000100;
         return this;
       }
       /**
@@ -12323,14 +12473,14 @@ public final class Protos {
         } else {
           encryptionParametersBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000080);
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
       /**
        * <code>optional .wallet.ScryptParameters encryption_parameters = 6;</code>
        */
       public org.bitcoinj.wallet.Protos.ScryptParameters.Builder getEncryptionParametersBuilder() {
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000100;
         onChanged();
         return getEncryptionParametersFieldBuilder().getBuilder();
       }
@@ -12372,7 +12522,7 @@ public final class Protos {
        * </pre>
        */
       public boolean hasVersion() {
-        return ((bitField0_ & 0x00000100) == 0x00000100);
+        return ((bitField0_ & 0x00000200) == 0x00000200);
       }
       /**
        * <code>optional int32 version = 7;</code>
@@ -12394,7 +12544,7 @@ public final class Protos {
        * </pre>
        */
       public Builder setVersion(int value) {
-        bitField0_ |= 0x00000100;
+        bitField0_ |= 0x00000200;
         version_ = value;
         onChanged();
         return this;
@@ -12408,7 +12558,7 @@ public final class Protos {
        * </pre>
        */
       public Builder clearVersion() {
-        bitField0_ = (bitField0_ & ~0x00000100);
+        bitField0_ = (bitField0_ & ~0x00000200);
         version_ = 0;
         onChanged();
         return this;
@@ -12418,9 +12568,9 @@ public final class Protos {
       private java.util.List<org.bitcoinj.wallet.Protos.Extension> extension_ =
         java.util.Collections.emptyList();
       private void ensureExtensionIsMutable() {
-        if (!((bitField0_ & 0x00000200) == 0x00000200)) {
+        if (!((bitField0_ & 0x00000400) == 0x00000400)) {
           extension_ = new java.util.ArrayList<org.bitcoinj.wallet.Protos.Extension>(extension_);
-          bitField0_ |= 0x00000200;
+          bitField0_ |= 0x00000400;
          }
       }
 
@@ -12569,7 +12719,7 @@ public final class Protos {
       public Builder clearExtension() {
         if (extensionBuilder_ == null) {
           extension_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000200);
+          bitField0_ = (bitField0_ & ~0x00000400);
           onChanged();
         } else {
           extensionBuilder_.clear();
@@ -12646,7 +12796,7 @@ public final class Protos {
           extensionBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               org.bitcoinj.wallet.Protos.Extension, org.bitcoinj.wallet.Protos.Extension.Builder, org.bitcoinj.wallet.Protos.ExtensionOrBuilder>(
                   extension_,
-                  ((bitField0_ & 0x00000200) == 0x00000200),
+                  ((bitField0_ & 0x00000400) == 0x00000400),
                   getParentForChildren(),
                   isClean());
           extension_ = null;
@@ -12664,7 +12814,7 @@ public final class Protos {
        * </pre>
        */
       public boolean hasDescription() {
-        return ((bitField0_ & 0x00000400) == 0x00000400);
+        return ((bitField0_ & 0x00000800) == 0x00000800);
       }
       /**
        * <code>optional string description = 11;</code>
@@ -12716,7 +12866,7 @@ public final class Protos {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000400;
+  bitField0_ |= 0x00000800;
         description_ = value;
         onChanged();
         return this;
@@ -12729,7 +12879,7 @@ public final class Protos {
        * </pre>
        */
       public Builder clearDescription() {
-        bitField0_ = (bitField0_ & ~0x00000400);
+        bitField0_ = (bitField0_ & ~0x00000800);
         description_ = getDefaultInstance().getDescription();
         onChanged();
         return this;
@@ -12746,7 +12896,7 @@ public final class Protos {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000400;
+  bitField0_ |= 0x00000800;
         description_ = value;
         onChanged();
         return this;
@@ -12764,7 +12914,7 @@ public final class Protos {
        * </pre>
        */
       public boolean hasKeyRotationTime() {
-        return ((bitField0_ & 0x00000800) == 0x00000800);
+        return ((bitField0_ & 0x00001000) == 0x00001000);
       }
       /**
        * <code>optional uint64 key_rotation_time = 13;</code>
@@ -12788,7 +12938,7 @@ public final class Protos {
        * </pre>
        */
       public Builder setKeyRotationTime(long value) {
-        bitField0_ |= 0x00000800;
+        bitField0_ |= 0x00001000;
         keyRotationTime_ = value;
         onChanged();
         return this;
@@ -12803,7 +12953,7 @@ public final class Protos {
        * </pre>
        */
       public Builder clearKeyRotationTime() {
-        bitField0_ = (bitField0_ & ~0x00000800);
+        bitField0_ = (bitField0_ & ~0x00001000);
         keyRotationTime_ = 0L;
         onChanged();
         return this;
@@ -12923,20 +13073,20 @@ public final class Protos {
       "Parameters\022\014\n\004salt\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\005163" +
       "84\022\014\n\001r\030\003 \001(\005:\0018\022\014\n\001p\030\004 \001(\005:\0011\"8\n\tExtens" +
       "ion\022\n\n\002id\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\022\021\n\tmandato" +
-      "ry\030\003 \002(\010\"\353\003\n\006Wallet\022\032\n\022network_identifie" +
+      "ry\030\003 \002(\010\"\202\004\n\006Wallet\022\032\n\022network_identifie" +
       "r\030\001 \002(\t\022\034\n\024last_seen_block_hash\030\002 \001(\014\022\036\n" +
       "\026last_seen_block_height\030\014 \001(\r\022!\n\031last_se" +
       "en_block_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013." +
       "wallet.Key\022(\n\013transaction\030\004 \003(\0132\023.wallet" +
-      ".Transaction\022C\n\017encryption_type\030\005 \001(\0162\035.",
-      "wallet.Wallet.EncryptionType:\013UNENCRYPTE" +
-      "D\0227\n\025encryption_parameters\030\006 \001(\0132\030.walle" +
-      "t.ScryptParameters\022\017\n\007version\030\007 \001(\005\022$\n\te" +
-      "xtension\030\n \003(\0132\021.wallet.Extension\022\023\n\013des" +
-      "cription\030\013 \001(\t\022\031\n\021key_rotation_time\030\r \001(" +
-      "\004\";\n\016EncryptionType\022\017\n\013UNENCRYPTED\020\001\022\030\n\024" +
-      "ENCRYPTED_SCRYPT_AES\020\002B\035\n\023org.bitcoinj.w" +
-      "alletB\006Protos"
+      ".Transaction\022\025\n\rwatchedScript\030\017 \003(\014\022C\n\017e",
+      "ncryption_type\030\005 \001(\0162\035.wallet.Wallet.Enc" +
+      "ryptionType:\013UNENCRYPTED\0227\n\025encryption_p" +
+      "arameters\030\006 \001(\0132\030.wallet.ScryptParameter" +
+      "s\022\017\n\007version\030\007 \001(\005\022$\n\textension\030\n \003(\0132\021." +
+      "wallet.Extension\022\023\n\013description\030\013 \001(\t\022\031\n" +
+      "\021key_rotation_time\030\r \001(\004\";\n\016EncryptionTy" +
+      "pe\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRYPTED_SCRYPT_" +
+      "AES\020\002B\035\n\023org.bitcoinj.walletB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -13002,7 +13152,7 @@ public final class Protos {
           internal_static_wallet_Wallet_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_wallet_Wallet_descriptor,
-              new java.lang.String[] { "NetworkIdentifier", "LastSeenBlockHash", "LastSeenBlockHeight", "LastSeenBlockTimeSecs", "Key", "Transaction", "EncryptionType", "EncryptionParameters", "Version", "Extension", "Description", "KeyRotationTime", });
+              new java.lang.String[] { "NetworkIdentifier", "LastSeenBlockHash", "LastSeenBlockHeight", "LastSeenBlockTimeSecs", "Key", "Transaction", "WatchedScript", "EncryptionType", "EncryptionParameters", "Version", "Extension", "Description", "KeyRotationTime", });
           return null;
         }
       };

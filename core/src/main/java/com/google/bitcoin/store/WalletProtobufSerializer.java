@@ -21,6 +21,8 @@ import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
 import com.google.bitcoin.crypto.EncryptedPrivateKey;
 import com.google.bitcoin.crypto.KeyCrypter;
 import com.google.bitcoin.crypto.KeyCrypterScrypt;
+import com.google.bitcoin.script.Script;
+import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
 import org.bitcoinj.wallet.Protos;
@@ -36,6 +38,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
@@ -152,6 +155,10 @@ public class WalletProtobufSerializer {
             // on mobile platforms.
             keyBuilder.setPublicKey(ByteString.copyFrom(key.getPubKey()));
             walletBuilder.addKey(keyBuilder);
+        }
+
+        for (Script script : wallet.getWatchedScripts()) {
+            walletBuilder.addWatchedScript(ByteString.copyFrom(script.getProgram()));
         }
 
         // Populate the lastSeenBlockHash field.
@@ -402,6 +409,17 @@ public class WalletProtobufSerializer {
             ecKey.setCreationTimeSeconds((keyProto.getCreationTimestamp() + 500) / 1000);
             wallet.addKey(ecKey);
         }
+
+        List<Script> scripts = Lists.newArrayList();
+        for (ByteString scriptBytes : walletProto.getWatchedScriptList()) {
+            try {
+                scripts.add(new Script(scriptBytes.toByteArray()));
+            } catch (ScriptException e) {
+                throw new UnreadableWalletException("Unparseable script in wallet");
+            }
+        }
+
+        wallet.addWatchedScripts(scripts);
 
         // Read all transactions and insert into the txMap.
         for (Protos.Transaction txProto : walletProto.getTransactionList()) {

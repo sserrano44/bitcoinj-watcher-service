@@ -610,7 +610,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(send1, eventDead[0]);
         assertEquals(send2, eventReplacement[0]);
         assertEquals(TransactionConfidence.ConfidenceType.DEAD,
-                     send1.getConfidence().getConfidenceType());
+                send1.getConfidence().getConfidenceType());
         assertEquals(send2, received.getOutput(0).getSpentBy().getParentTransaction());
 
         TestUtils.DoubleSpends doubleSpends = TestUtils.createFakeDoubleSpendTxns(params, myAddress);
@@ -621,7 +621,7 @@ public class WalletTest extends TestWithWallet {
         sendMoneyToWallet(doubleSpends.t2, AbstractBlockChain.NewBlockType.BEST_CHAIN);
         Threading.waitForUserCode();
         assertEquals(TransactionConfidence.ConfidenceType.DEAD,
-                     doubleSpends.t1.getConfidence().getConfidenceType());
+                doubleSpends.t1.getConfidence().getConfidenceType());
         assertEquals(doubleSpends.t2, doubleSpends.t1.getConfidence().getOverridingTransaction());
         assertEquals(5, eventWalletChanged[0]);
     }
@@ -910,6 +910,33 @@ public class WalletTest extends TestWithWallet {
         assertEquals(t2.toString(), 1, t2.getInputs().get(0).getScriptSig().getChunks().size());
         assertTrue(t2.getInputs().get(0).getScriptSig().getChunks().get(0).data.length > 50);
         log.info(t2.toString(chain));
+    }
+
+    @Test
+    public void watchingScripts() throws Exception {
+        // Verify that pending transactions to watched addresses are relevant
+        ECKey key = new ECKey();
+        Address watchedAddress = key.toAddress(params);
+        wallet.addWatchedAddress(watchedAddress);
+        BigInteger value = toNanoCoins(5, 0);
+        Transaction t1 = createFakeTx(params, value, watchedAddress);
+        assertTrue(wallet.isPendingTransactionRelevant(t1));
+    }
+
+    @Test
+    public void watchingScripts_confirmed() throws Exception {
+        ECKey key = new ECKey();
+        Address watchedAddress = key.toAddress(params);
+        wallet.addWatchedAddress(watchedAddress);
+        Transaction t1 = createFakeTx(params, CENT, watchedAddress);
+        StoredBlock b3 = createFakeBlock(blockStore, t1).storedBlock;
+        wallet.receiveFromBlock(t1, b3, BlockChain.NewBlockType.BEST_CHAIN, 0);
+        assertEquals(BigInteger.ZERO, wallet.getBalance());
+        assertEquals(CENT, wallet.getWatchedBalance());
+
+        // We can't spend watched balances
+        Address notMyAddr = new ECKey().toAddress(params);
+        assertNull(wallet.createSend(notMyAddr, CENT));
     }
 
     @Test

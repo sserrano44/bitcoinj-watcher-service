@@ -110,7 +110,8 @@ public class Script {
             for (ScriptChunk chunk : chunks) {
                 chunk.write(bos);
             }
-            return bos.toByteArray();
+            program = bos.toByteArray();
+            return program;
         } catch (IOException e) {
             throw new RuntimeException(e);  // Cannot happen.
         }
@@ -1226,5 +1227,27 @@ public class Script {
             if (!castToBool(p2shStack.pollLast()))
                 throw new ScriptException("P2SH script execution resulted in a non-true stack");
         }
+    }
+
+    // Utility that doesn't copy for internal use
+    private byte[] getQuickProgram() {
+        if (program != null)
+            return program;
+        return getProgram();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Script))
+            return false;
+        Script s = (Script)obj;
+        return Arrays.equals(getQuickProgram(), s.getQuickProgram());
+    }
+
+    @Override
+    public int hashCode() {
+        byte[] bytes = getQuickProgram();
+        if (bytes.length < 6) return 0; // Unlikely
+        return (bytes[2] & 0xFF) | ((bytes[3] & 0xFF) << 8) | ((bytes[4] & 0xFF) << 16) | ((bytes[5] & 0xFF) << 24);
     }
 }

@@ -21,6 +21,9 @@ import com.google.bitcoin.core.WalletTransaction.Pool;
 import com.google.bitcoin.crypto.KeyCrypter;
 import com.google.bitcoin.crypto.KeyCrypterException;
 import com.google.bitcoin.crypto.KeyCrypterScrypt;
+import com.google.bitcoin.script.Script;
+import com.google.bitcoin.script.ScriptBuilder;
+import com.google.bitcoin.script.ScriptChunk;
 import com.google.bitcoin.store.UnreadableWalletException;
 import com.google.bitcoin.store.WalletProtobufSerializer;
 import com.google.bitcoin.utils.ListenerRegistration;
@@ -128,6 +131,9 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     // A list of public/private EC keys owned by this user. Access it using addKey[s], hasKey[s] and findPubKeyFromHash.
     private ArrayList<ECKey> keychain;
 
+    // A list of scripts watched by this wallet.
+    private Set<Script> watchedScripts;
+
     private final NetworkParameters params;
 
     private Sha256Hash lastBlockSeenHash;
@@ -193,6 +199,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         this.keyCrypter = keyCrypter;
         this.params = checkNotNull(params);
         keychain = new ArrayList<ECKey>();
+        watchedScripts = Sets.newHashSet();
         unspent = new HashMap<Sha256Hash, Transaction>();
         spent = new HashMap<Sha256Hash, Transaction>();
         pending = new HashMap<Sha256Hash, Transaction>();
@@ -241,6 +248,18 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         lock.lock();
         try {
             return new ArrayList<ECKey>(keychain);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Returns a snapshot of the watched scripts. This view is not live.
+     */
+    public List<Script> getWatchedScripts() {
+        lock.lock();
+        try {
+            return new ArrayList<Script>(watchedScripts);
         } finally {
             lock.unlock();
         }
@@ -982,6 +1001,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         boolean hasOutputsToMe = tx.getValueSentToMe(this, true).compareTo(BigInteger.ZERO) > 0;
         if (hasOutputsToMe) {
             // Needs to go into either unspent or spent (if the outputs were already spent by a pending tx).
+            //FIXME(miron)
             if (tx.isEveryOwnedOutputSpent(this)) {
                 log.info("  tx {} ->spent (by pending)", tx.getHashAsString());
                 addWalletTransaction(Pool.SPENT, tx);
@@ -1956,6 +1976,29 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         }
     }
 
+    public LinkedList<TransactionOutput> getWatchedOutputs(boolean excludeImmatureCoinbases) {
+        lock.lock();
+        try {
+            LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
+            for (Transaction tx : Iterables.concat(unspent.values(), pending.values())) {
+                if (excludeImmatureCoinbases && !tx.isMature()) continue;
+                for (TransactionOutput output : tx.getOutputs()) {
+                    if (!output.isAvailableForSpending()) continue;
+                    try {
+                        Script scriptPubKey = output.getScriptPubKey();
+                        if (!watchedScripts.contains(scriptPubKey)) continue;
+                        candidates.add(output);
+                    } catch (ScriptException e) {
+                        // Ignore
+                    }
+                }
+            }
+            return candidates;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     /** Returns the address used for change outputs. Note: this will probably go away in future. */
     public Address getChangeAddress() {
         lock.lock();
@@ -2015,6 +2058,66 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     }
 
     /**
+     * Return true if we are watching this address.
+     */
+    public boolean isAddressWatched(Address address) {
+        Script script = ScriptBuilder.createOutputScript(address);
+        return watchedScripts.contains(script);
+    }
+
+    /**
+     * Adds the given address to the wallet to be watched. Outputs can be retrieved
+     * by {@link #getWatchedOutputs(boolean)}.
+     *
+     * @return whether the address was added successfully (not already present)
+     */
+    public boolean addWatchedAddress(final Address address) {
+        return addWatchedAddresses(Lists.newArrayList(address)) == 1;
+    }
+
+    /**
+     * Adds the given address to the wallet to be watched. Outputs can be retrieved
+     * by {@link #getWatchedOutputs(boolean)}.
+     *
+     * @return how many addresses were added successfully
+     */
+    public int addWatchedAddresses(final List<Address> addresses) {
+        List<Script> scripts = Lists.newArrayList();
+
+        for (Address address : addresses) {
+            Script script = ScriptBuilder.createOutputScript(address);
+            scripts.add(script);
+        }
+
+        return addWatchedScripts(scripts);
+    }
+
+    /**
+     * Adds the given output scripts to the wallet to be watched. Outputs can be retrieved
+     * by {@link #getWatchedOutputs(boolean)}.
+     *
+     * @return how many scripts were added successfully
+     */
+    public int addWatchedScripts(final List<Script> scripts) {
+        lock.lock();
+        try {
+            int added = 0;
+            for (final Script script : scripts) {
+                if (watchedScripts.contains(script)) continue;
+
+                watchedScripts.add(script);
+                added++;
+            }
+
+            queueOnScriptsAdded(scripts);
+            saveNow();
+            return added;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
      * Locates a keypair from the keychain given the hash of the public key. This is needed when finding out which
      * key we need to use to redeem a transaction output.
      *
@@ -2047,6 +2150,10 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      */
     public boolean isPubKeyHashMine(byte[] pubkeyHash) {
         return findKeyFromPubHash(pubkeyHash) != null;
+    }
+
+    public boolean isWatchedScript(Script script) {
+        return watchedScripts.contains(script);
     }
 
     /**
@@ -2134,6 +2241,27 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         try {
             checkNotNull(selector);
             LinkedList<TransactionOutput> candidates = calculateAllSpendCandidates(true);
+            CoinSelection selection = selector.select(NetworkParameters.MAX_MONEY, candidates);
+            return selection.valueGathered;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /** Returns the available balance, including any unspent balance at watched addresses */
+    public BigInteger getWatchedBalance() {
+        return getWatchedBalance(coinSelector);
+    }
+
+     /**
+     * Returns the balance that would be considered spendable by the given coin selector, including
+     * any unspent balance at watched addresses.
+     */
+    public BigInteger getWatchedBalance(CoinSelector selector) {
+        lock.lock();
+        try {
+            checkNotNull(selector);
+            LinkedList<TransactionOutput> candidates = getWatchedOutputs(true);
             CoinSelection selection = selector.select(NetworkParameters.MAX_MONEY, candidates);
             return selection.valueGathered;
         } finally {
@@ -2840,6 +2968,10 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 }
             }
         }
+
+        // TODO(miron) some scripts may have more than one bloom element
+        size += watchedScripts.size();
+
         return size;
     }
     
@@ -2870,6 +3002,15 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 filter.insert(key.getPubKey());
                 filter.insert(key.getPubKeyHash());
             }
+
+            for (Script script : watchedScripts) {
+                for (ScriptChunk chunk : script.getChunks()) {
+                    // TODO(miron) what is a good minimum data length for the filter?
+                    if (!chunk.isOpCode() && chunk.data.length >= 8) {
+                        filter.insert(chunk.data);
+                    }
+                }
+            }
         } finally {
             lock.unlock();
         }
@@ -2886,6 +3027,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 }
             }
         }
+
         return filter;
     }
 
@@ -3140,6 +3282,18 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 @Override
                 public void run() {
                     registration.listener.onKeysAdded(Wallet.this, keys);
+                }
+            });
+        }
+    }
+
+    private void queueOnScriptsAdded(final List<Script> scripts) {
+        checkState(lock.isHeldByCurrentThread());
+        for (final ListenerRegistration<WalletEventListener> registration : eventListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onScriptsAdded(Wallet.this, scripts);
                 }
             });
         }
