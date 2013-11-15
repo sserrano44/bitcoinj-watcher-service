@@ -82,7 +82,7 @@ public class AddressResource {
         for (TransactionOutput output : selection.gathered) {
             Transaction tx = output.getParentTransaction();
             int index = tx.getOutputs().indexOf(output);
-            outputs.add(new TxOut(tx.getHashAsString(), index));
+            outputs.add(new TxOut(tx.getHashAsString(), index, output, tx.getConfidence().getDepthInBlocks()));
         }
         return outputs;
     }
@@ -96,7 +96,7 @@ public class AddressResource {
         return wallet.addKey(key);
     }
 
-    @PUT @Path("/")
+    @PUT
     @Timed
     public boolean add(ListeningAddress listen) throws AddressFormatException {
         byte[] pubKeyHash = new Address(wallet.getNetworkParameters(), listen.getAddress()).getHash160();

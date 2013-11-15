@@ -16,6 +16,9 @@ package org.gitian.bitcoin;
  * limitations under the License.
  */
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.SerializationConfig;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.bitcoin.core.AbstractWalletEventListener;
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.ECKey;
@@ -122,5 +125,6 @@ public class WatcherService extends Service<WatcherConfiguration> {
     @Override
     public void run(WatcherConfiguration configuration, Environment environment) throws Exception {
         environment.addResource(new AddressResource(kit.wallet()));
+        environment.getObjectMapperFactory().enable(SerializationFeature.INDENT_OUTPUT);
     }
 }
