@@ -16,6 +16,7 @@ import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.wallet.CoinSelection;
 import com.google.bitcoin.wallet.CoinSelector;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.yammer.metrics.annotation.Timed;
 
 import org.gitian.bitcoin.core.Balance;
@@ -26,13 +27,16 @@ import java.math.BigInteger;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 @Path("/address")
 @Produces(MediaType.APPLICATION_JSON)
@@ -44,15 +48,33 @@ public class AddressResource {
         this.wallet = wallet;
     }
 
+    private void ensureAddressIsMine(String address) {
+        try {
+            if (!wallet.isPubKeyHashMine(new Address(wallet.getNetworkParameters(), address).getHash160())) {
+                badRequest("unregistered address");
+            }
+        } catch (AddressFormatException e) {
+            badRequest("bad address");
+        }
+    }
+
+    private void badRequest(String error) {
+        Map<String, String> result = Maps.newHashMap();
+        result.put("error", error);
+        throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST).entity(result).build());
+    }
+
     @GET @Path("/{address}/balance")
     @Timed
     public Balance balance(@PathParam("address")final String address) {
+        ensureAddressIsMine(address);
         return new Balance(wallet.getBalance(new MyCoinSelector(address)));
     }
 
     @GET @Path("/{address}/unspent")
     @Timed
     public List<TxOut> unspent(@PathParam("address")final String address) {
+        ensureAddressIsMine(address);
         LinkedList<TransactionOutput> candidates = wallet.calculateAllSpendCandidates(true);
         CoinSelection selection =
                 new MyCoinSelector(address).select(NetworkParameters.MAX_MONEY, candidates);
