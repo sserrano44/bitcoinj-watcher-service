@@ -50,7 +50,7 @@ public class AddressResource {
 
     private void ensureAddressIsMine(String address) {
         try {
-            if (!wallet.isPubKeyHashMine(new Address(wallet.getNetworkParameters(), address).getHash160())) {
+            if (!wallet.isAddressWatched(new Address(wallet.getNetworkParameters(), address))) {
                 badRequest("unregistered address");
             }
         } catch (AddressFormatException e) {
@@ -68,14 +68,14 @@ public class AddressResource {
     @Timed
     public Balance balance(@PathParam("address")final String address) {
         ensureAddressIsMine(address);
-        return new Balance(wallet.getBalance(new MyCoinSelector(address)));
+        return new Balance(wallet.getWatchedBalance(new MyCoinSelector(address)));
     }
 
     @GET @Path("/{address}/unspent")
     @Timed
     public List<TxOut> unspent(@PathParam("address")final String address) {
         ensureAddressIsMine(address);
-        LinkedList<TransactionOutput> candidates = wallet.calculateAllSpendCandidates(true);
+        LinkedList<TransactionOutput> candidates = wallet.getWatchedOutputs(true);
         CoinSelection selection =
                 new MyCoinSelector(address).select(NetworkParameters.MAX_MONEY, candidates);
         List<TxOut> outputs = Lists.newArrayList();
@@ -99,10 +99,8 @@ public class AddressResource {
     @PUT
     @Timed
     public boolean add(ListeningAddress listen) throws AddressFormatException {
-        byte[] pubKeyHash = new Address(wallet.getNetworkParameters(), listen.getAddress()).getHash160();
-        ECKey key = new ECKey(pubKeyHash);
-        key.setCreationTimeSeconds(System.currentTimeMillis()/1000 - DEFAULT_LOOKBACK_SECONDS);
-        return wallet.addKey(key);
+        Address address = new Address(wallet.getNetworkParameters(), listen.getAddress());
+        return wallet.addWatchedAddress(address);
     }
 
     private class MyCoinSelector implements CoinSelector {
