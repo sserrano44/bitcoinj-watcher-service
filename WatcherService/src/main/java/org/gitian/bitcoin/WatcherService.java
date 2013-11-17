@@ -37,6 +37,7 @@ import com.yammer.dropwizard.config.Bootstrap;
 import com.yammer.dropwizard.config.Environment;
 
 import org.gitian.bitcoin.resources.AddressResource;
+import org.gitian.bitcoin.resources.TransactionResource;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -125,6 +126,7 @@ public class WatcherService extends Service<WatcherConfiguration> {
     @Override
     public void run(WatcherConfiguration configuration, Environment environment) throws Exception {
         environment.addResource(new AddressResource(kit.wallet()));
+        environment.addResource(new TransactionResource(kit.peerGroup(), kit.wallet()));
         environment.getObjectMapperFactory().enable(SerializationFeature.INDENT_OUTPUT);
     }
 }

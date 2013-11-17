@@ -13,10 +13,12 @@ import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.TransactionOutput;
 import com.google.bitcoin.core.Utils;
 import com.google.bitcoin.core.Wallet;
+import com.google.bitcoin.script.Script;
 import com.google.bitcoin.wallet.CoinSelection;
 import com.google.bitcoin.wallet.CoinSelector;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.yammer.metrics.annotation.Timed;
 
 import org.gitian.bitcoin.core.Balance;
@@ -28,8 +30,11 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -58,7 +63,7 @@ public class AddressResource {
         }
     }
 
-    private void badRequest(String error) {
+    static private void badRequest(String error) {
         Map<String, String> result = Maps.newHashMap();
         result.put("error", error);
         throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST).entity(result).build());
@@ -87,20 +92,47 @@ public class AddressResource {
         return outputs;
     }
 
-    @GET @Path("/{pubkey}/addpubkey")
-    @Timed
-    public boolean addPubkey(@PathParam("pubkey")String pubkeyString) {
-        byte[] pubkey = Utils.parseAsHexOrBase58(pubkeyString);
-        ECKey key = new ECKey(null, pubkey);
-        key.setCreationTimeSeconds(System.currentTimeMillis()/1000 - DEFAULT_LOOKBACK_SECONDS);
-        return wallet.addKey(key);
-    }
-
     @PUT
     @Timed
-    public boolean add(ListeningAddress listen) throws AddressFormatException {
-        Address address = new Address(wallet.getNetworkParameters(), listen.getAddress());
+    public boolean add(ListeningAddress listenAddress) throws AddressFormatException {
+        Address address = new Address(wallet.getNetworkParameters(), listenAddress.getAddress());
         return wallet.addWatchedAddress(address);
+    }
+
+    @GET
+    @Timed
+    public List<String> index() throws Exception {
+        List<String> addresses = Lists.newArrayList();
+
+        for (Script script : wallet.getWatchedScripts()) {
+            addresses.add(script.getToAddress(wallet.getNetworkParameters()).toString());
+        }
+
+        return addresses;
+    }
+
+    @GET @Path("/debug")
+    @Timed
+    public String debug() {
+        return wallet.toString();
+    }
+
+    @POST @Path("/debug/add")
+    public int debugAdd(int count) {
+        List<Address> addresses = Lists.newArrayList();
+
+        for (int i = 0 ; i < count ; i++) {
+            ECKey key = new ECKey();
+            addresses.add(key.toAddress(wallet.getNetworkParameters()));
+        }
+
+        return wallet.addWatchedAddresses(addresses);
+    }
+
+    @GET @Path("/check")
+    @Timed
+    public boolean check() {
+        return wallet.isConsistent();
     }
 
     private class MyCoinSelector implements CoinSelector {
