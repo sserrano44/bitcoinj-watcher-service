@@ -2308,6 +2308,22 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 builder.append(includePrivateKeys ? key.toStringWithPrivate() : key.toString());
                 builder.append("\n");
             }
+
+            builder.append("\nWatched:\n");
+            for (Script script : watchedScripts) {
+                builder.append("  script:");
+                builder.append(script);
+                builder.append(" ");
+                if (script.isSentToAddress()) {
+                    try {
+                        builder.append("address: ");
+                        builder.append(script.getToAddress(params));
+                    } catch (ScriptException e) {
+                        builder.append("UNPARSEABLE");
+                    }
+                }
+                builder.append("\n");
+            }
             if (includeTransactions) {
                 // Print the transactions themselves
                 if (unspent.size() > 0) {
