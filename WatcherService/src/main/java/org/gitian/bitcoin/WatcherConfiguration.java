@@ -10,11 +10,10 @@ import com.yammer.dropwizard.config.Configuration;
 import org.hibernate.validator.constraints.NotEmpty;
 
 public class WatcherConfiguration extends Configuration {
-    @NotEmpty
     @JsonProperty
-    private String defaultName = "Stranger";
+    private String filePrefix;
 
-    public String getDefaultName() {
-        return defaultName;
+    public String getFilePrefix() {
+        return filePrefix;
     }
 }

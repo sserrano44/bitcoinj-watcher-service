@@ -1,8 +1,7 @@
-defaultName: Stranger
 logging:
 
   # The default level of all loggers. Can be OFF, ERROR, WARN, INFO, DEBUG, TRACE, or ALL.
-  level: ALL
+  level: DEBUG
 
 logging:
 
@@ -14,4 +13,4 @@ logging:
     enabled: true
 
     # Do not display log statements below this threshold to stdout.
-    threshold: ALL
+    threshold: DEBUG

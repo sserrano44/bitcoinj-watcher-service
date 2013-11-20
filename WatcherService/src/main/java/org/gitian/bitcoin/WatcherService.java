@@ -16,16 +16,8 @@ package org.gitian.bitcoin;
  * limitations under the License.
  */
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.bitcoin.core.AbstractWalletEventListener;
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.NetworkParameters;
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.Utils;
-import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.kits.WalletAppKit;
 import com.google.bitcoin.params.MainNetParams;
 import com.google.bitcoin.params.RegTestParams;
@@ -41,7 +33,6 @@ import org.gitian.bitcoin.resources.TransactionResource;
 
 import java.io.File;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.util.ArrayList;
 
 /**
@@ -49,7 +40,14 @@ import java.util.ArrayList;
  * sends them onwards to an address given on the command line.
  */
 public class WatcherService extends Service<WatcherConfiguration> {
-    private static WalletAppKit kit;
+    private WalletAppKit kit;
+    private final NetworkParameters params;
+    private String filePrefix;
+
+    public WatcherService(NetworkParameters params, String filePrefix) {
+        this.params = params;
+        this.filePrefix = filePrefix;
+    }
 
     public static void main(String[] args) throws Exception {
         // This line makes the log output more compact and easily read, especially when using the JDK log adapter.
@@ -62,7 +60,10 @@ public class WatcherService extends Service<WatcherConfiguration> {
         // Figure out which network we should connect to. Each one gets its own set of files.
         NetworkParameters params;
         String filePrefix;
-        String net = args[0];
+        ArrayList<String> argsList = Lists.newArrayList(args);
+        String net = argsList.remove(0);
+        args = argsList.toArray(new String[argsList.size()]);
+
         if (net.equals("testnet")) {
             params = TestNet3Params.get();
             filePrefix = "watcher-service-testnet";
@@ -74,7 +75,23 @@ public class WatcherService extends Service<WatcherConfiguration> {
             filePrefix = "watcher-service";
         }
 
-        // Start up a basic app using a class that automates some boilerplate.
+        new WatcherService(params, filePrefix).run(args);
+
+        try {
+            Thread.sleep(Long.MAX_VALUE);
+        } catch (InterruptedException ignored) {}
+    }
+
+    @Override
+    public void initialize(Bootstrap<WatcherConfiguration> bootstrap) {
+        bootstrap.setName("watcher");
+    }
+
+    @Override
+    public void run(WatcherConfiguration configuration, Environment environment) throws Exception {
+        if (configuration.getFilePrefix() != null) {
+            filePrefix = configuration.getFilePrefix();
+        }
         kit = new WalletAppKit(params, new File("."), filePrefix);
 
         if (params == RegTestParams.get()) {
@@ -89,42 +106,6 @@ public class WatcherService extends Service<WatcherConfiguration> {
         // Download the block chain and wait until it's done.
         kit.startAndWait();
 
-        // We want to know when we receive money.
-        kit.wallet().addEventListener(new AbstractWalletEventListener() {
-            @Override
-            public void onCoinsReceived(Wallet w, Transaction tx, BigInteger prevBalance, BigInteger newBalance) {
-                // Runs in the dedicated "user thread" (see bitcoinj docs for more info on this).
-                //
-                // The transaction "tx" can either be pending, or included into a block (we didn't see the broadcast).
-                BigInteger value = tx.getValueSentToMe(w);
-                System.out.println("Received tx for " + Utils.bitcoinValueToFriendlyString(value) + ": " + tx);
-            }
-        });
-
-        ArrayList<String> argsList = Lists.newArrayList(args);
-        argsList.remove(0);
-        args = argsList.toArray(new String[argsList.size()]);
-        new WatcherService().run(args);
-
-        ECKey ecKey = kit.wallet().getKeys().get(0);
-        Address sendToAddress = ecKey.toAddress(params);
-
-        System.out.println("Send coins to: " + sendToAddress);
-        System.out.println("Pubkey: " + ecKey);
-        System.out.println("Waiting for coins to arrive. Press Ctrl-C to quit.");
-
-        try {
-            Thread.sleep(Long.MAX_VALUE);
-        } catch (InterruptedException ignored) {}
-    }
-
-    @Override
-    public void initialize(Bootstrap<WatcherConfiguration> bootstrap) {
-        bootstrap.setName("watcher");
-    }
-
-    @Override
-    public void run(WatcherConfiguration configuration, Environment environment) throws Exception {
         environment.addResource(new AddressResource(kit.wallet()));
         environment.addResource(new TransactionResource(kit.peerGroup(), kit.wallet()));
         environment.getObjectMapperFactory().enable(SerializationFeature.INDENT_OUTPUT);
