@@ -95,8 +95,21 @@ public class AddressResource {
     @PUT
     @Timed
     public boolean add(ListeningAddress listenAddress) throws AddressFormatException {
-        Address address = new Address(wallet.getNetworkParameters(), listenAddress.getAddress());
-        return wallet.addWatchedAddress(address);
+        if (listenAddress.getAddress() != null) {
+            Address address = new Address(wallet.getNetworkParameters(), listenAddress.getAddress());
+            return wallet.addWatchedAddress(address);
+        }
+
+        if (listenAddress.getAddresses() != null) {
+            List<Address> addresses = Lists.newArrayList();
+            for (String addressString : listenAddress.getAddresses()) {
+                Address address = new Address(wallet.getNetworkParameters(), addressString);
+                addresses.add(address);
+            }
+            return wallet.addWatchedAddresses(addresses) == addresses.size();
+        }
+
+        return false;
     }
 
     @GET
