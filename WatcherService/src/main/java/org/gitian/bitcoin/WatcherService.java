@@ -40,7 +40,7 @@ import org.gitian.bitcoin.resources.AddressResource;
 import org.gitian.bitcoin.resources.TransactionResource;
 
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
 
@@ -83,7 +83,7 @@ public class WatcherService extends Service<WatcherConfiguration> {
             kit.connectToLocalHost();
         }
 
-        FileInputStream checkpointsStream = new FileInputStream("checkpoints");
+        InputStream checkpointsStream = WatcherService.class.getResourceAsStream("/watcherservice/checkpoints");
         kit.setCheckpoints(checkpointsStream);
 
         // Download the block chain and wait until it's done.
