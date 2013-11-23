@@ -1247,7 +1247,6 @@ public class Script {
     @Override
     public int hashCode() {
         byte[] bytes = getQuickProgram();
-        if (bytes.length < 6) return 0; // Unlikely
-        return (bytes[2] & 0xFF) | ((bytes[3] & 0xFF) << 8) | ((bytes[4] & 0xFF) << 16) | ((bytes[5] & 0xFF) << 24);
+        return Arrays.hashCode(bytes);
     }
 }

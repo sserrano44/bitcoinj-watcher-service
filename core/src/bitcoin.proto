@@ -257,7 +257,7 @@ message Wallet {
 
   repeated Key key = 3;
   repeated Transaction transaction = 4;
-  repeated bytes watchedScript = 15;
+  repeated bytes watched_script = 15;
 
   optional EncryptionType encryption_type = 5 [default=UNENCRYPTED];
   optional ScryptParameters encryption_parameters = 6;

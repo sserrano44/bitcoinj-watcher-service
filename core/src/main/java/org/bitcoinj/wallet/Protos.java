@@ -10124,17 +10124,17 @@ public final class Protos {
     org.bitcoinj.wallet.Protos.TransactionOrBuilder getTransactionOrBuilder(
         int index);
 
-    // repeated bytes watchedScript = 15;
+    // repeated bytes watched_script = 15;
     /**
-     * <code>repeated bytes watchedScript = 15;</code>
+     * <code>repeated bytes watched_script = 15;</code>
      */
     java.util.List<com.google.protobuf.ByteString> getWatchedScriptList();
     /**
-     * <code>repeated bytes watchedScript = 15;</code>
+     * <code>repeated bytes watched_script = 15;</code>
      */
     int getWatchedScriptCount();
     /**
-     * <code>repeated bytes watchedScript = 15;</code>
+     * <code>repeated bytes watched_script = 15;</code>
      */
     com.google.protobuf.ByteString getWatchedScript(int index);
 
@@ -10752,24 +10752,24 @@ public final class Protos {
       return transaction_.get(index);
     }
 
-    // repeated bytes watchedScript = 15;
-    public static final int WATCHEDSCRIPT_FIELD_NUMBER = 15;
+    // repeated bytes watched_script = 15;
+    public static final int WATCHED_SCRIPT_FIELD_NUMBER = 15;
     private java.util.List<com.google.protobuf.ByteString> watchedScript_;
     /**
-     * <code>repeated bytes watchedScript = 15;</code>
+     * <code>repeated bytes watched_script = 15;</code>
      */
     public java.util.List<com.google.protobuf.ByteString>
         getWatchedScriptList() {
       return watchedScript_;
     }
     /**
-     * <code>repeated bytes watchedScript = 15;</code>
+     * <code>repeated bytes watched_script = 15;</code>
      */
     public int getWatchedScriptCount() {
       return watchedScript_.size();
     }
     /**
-     * <code>repeated bytes watchedScript = 15;</code>
+     * <code>repeated bytes watched_script = 15;</code>
      */
     public com.google.protobuf.ByteString getWatchedScript(int index) {
       return watchedScript_.get(index);
@@ -12286,7 +12286,7 @@ public final class Protos {
         return transactionBuilder_;
       }
 
-      // repeated bytes watchedScript = 15;
+      // repeated bytes watched_script = 15;
       private java.util.List<com.google.protobuf.ByteString> watchedScript_ = java.util.Collections.emptyList();
       private void ensureWatchedScriptIsMutable() {
         if (!((bitField0_ & 0x00000040) == 0x00000040)) {
@@ -12295,26 +12295,26 @@ public final class Protos {
          }
       }
       /**
-       * <code>repeated bytes watchedScript = 15;</code>
+       * <code>repeated bytes watched_script = 15;</code>
        */
       public java.util.List<com.google.protobuf.ByteString>
           getWatchedScriptList() {
         return java.util.Collections.unmodifiableList(watchedScript_);
       }
       /**
-       * <code>repeated bytes watchedScript = 15;</code>
+       * <code>repeated bytes watched_script = 15;</code>
        */
       public int getWatchedScriptCount() {
         return watchedScript_.size();
       }
       /**
-       * <code>repeated bytes watchedScript = 15;</code>
+       * <code>repeated bytes watched_script = 15;</code>
        */
       public com.google.protobuf.ByteString getWatchedScript(int index) {
         return watchedScript_.get(index);
       }
       /**
-       * <code>repeated bytes watchedScript = 15;</code>
+       * <code>repeated bytes watched_script = 15;</code>
        */
       public Builder setWatchedScript(
           int index, com.google.protobuf.ByteString value) {
@@ -12327,7 +12327,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated bytes watchedScript = 15;</code>
+       * <code>repeated bytes watched_script = 15;</code>
        */
       public Builder addWatchedScript(com.google.protobuf.ByteString value) {
         if (value == null) {
@@ -12339,7 +12339,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated bytes watchedScript = 15;</code>
+       * <code>repeated bytes watched_script = 15;</code>
        */
       public Builder addAllWatchedScript(
           java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
@@ -12349,7 +12349,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated bytes watchedScript = 15;</code>
+       * <code>repeated bytes watched_script = 15;</code>
        */
       public Builder clearWatchedScript() {
         watchedScript_ = java.util.Collections.emptyList();
@@ -13073,20 +13073,20 @@ public final class Protos {
       "Parameters\022\014\n\004salt\030\001 \002(\014\022\020\n\001n\030\002 \001(\003:\005163" +
       "84\022\014\n\001r\030\003 \001(\005:\0018\022\014\n\001p\030\004 \001(\005:\0011\"8\n\tExtens" +
       "ion\022\n\n\002id\030\001 \002(\t\022\014\n\004data\030\002 \002(\014\022\021\n\tmandato" +
-      "ry\030\003 \002(\010\"\202\004\n\006Wallet\022\032\n\022network_identifie" +
+      "ry\030\003 \002(\010\"\203\004\n\006Wallet\022\032\n\022network_identifie" +
       "r\030\001 \002(\t\022\034\n\024last_seen_block_hash\030\002 \001(\014\022\036\n" +
       "\026last_seen_block_height\030\014 \001(\r\022!\n\031last_se" +
       "en_block_time_secs\030\016 \001(\003\022\030\n\003key\030\003 \003(\0132\013." +
       "wallet.Key\022(\n\013transaction\030\004 \003(\0132\023.wallet" +
-      ".Transaction\022\025\n\rwatchedScript\030\017 \003(\014\022C\n\017e",
-      "ncryption_type\030\005 \001(\0162\035.wallet.Wallet.Enc" +
-      "ryptionType:\013UNENCRYPTED\0227\n\025encryption_p" +
-      "arameters\030\006 \001(\0132\030.wallet.ScryptParameter" +
-      "s\022\017\n\007version\030\007 \001(\005\022$\n\textension\030\n \003(\0132\021." +
-      "wallet.Extension\022\023\n\013description\030\013 \001(\t\022\031\n" +
-      "\021key_rotation_time\030\r \001(\004\";\n\016EncryptionTy" +
-      "pe\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRYPTED_SCRYPT_" +
-      "AES\020\002B\035\n\023org.bitcoinj.walletB\006Protos"
+      ".Transaction\022\026\n\016watched_script\030\017 \003(\014\022C\n\017",
+      "encryption_type\030\005 \001(\0162\035.wallet.Wallet.En" +
+      "cryptionType:\013UNENCRYPTED\0227\n\025encryption_" +
+      "parameters\030\006 \001(\0132\030.wallet.ScryptParamete" +
+      "rs\022\017\n\007version\030\007 \001(\005\022$\n\textension\030\n \003(\0132\021" +
+      ".wallet.Extension\022\023\n\013description\030\013 \001(\t\022\031" +
+      "\n\021key_rotation_time\030\r \001(\004\";\n\016EncryptionT" +
+      "ype\022\017\n\013UNENCRYPTED\020\001\022\030\n\024ENCRYPTED_SCRYPT" +
+      "_AES\020\002B\035\n\023org.bitcoinj.walletB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

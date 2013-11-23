@@ -98,6 +98,7 @@ import static com.google.common.base.Preconditions.*;
 public class Wallet implements Serializable, BlockChainListener, PeerFilterProvider {
     private static final Logger log = LoggerFactory.getLogger(Wallet.class);
     private static final long serialVersionUID = 2L;
+    private static final int MINIMUM_BLOOM_DATA_LENGTH = 8;
 
     protected final ReentrantLock lock = Threading.lock("wallet");
 
@@ -1001,7 +1002,6 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         boolean hasOutputsToMe = tx.getValueSentToMe(this, true).compareTo(BigInteger.ZERO) > 0;
         if (hasOutputsToMe) {
             // Needs to go into either unspent or spent (if the outputs were already spent by a pending tx).
-            //FIXME(miron)
             if (tx.isEveryOwnedOutputSpent(this)) {
                 log.info("  tx {} ->spent (by pending)", tx.getHashAsString());
                 addWalletTransaction(Pool.SPENT, tx);
@@ -2062,7 +2062,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      */
     public boolean isAddressWatched(Address address) {
         Script script = ScriptBuilder.createOutputScript(address);
-        return watchedScripts.contains(script);
+        return isWatchedScript(script);
     }
 
     /**
@@ -2152,8 +2152,14 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         return findKeyFromPubHash(pubkeyHash) != null;
     }
 
+    /** Returns true if this wallet is watching transactions for outputs with the script. */
     public boolean isWatchedScript(Script script) {
-        return watchedScripts.contains(script);
+        lock.lock();
+        try {
+            return watchedScripts.contains(script);
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -2969,7 +2975,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             }
         }
 
-        // TODO(miron) some scripts may have more than one bloom element
+        // Some scripts may have more than one bloom element.  That should normally be okay,
+        // because under-counting just increases false-positive rate.
         size += watchedScripts.size();
 
         return size;
@@ -3005,8 +3012,10 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
 
             for (Script script : watchedScripts) {
                 for (ScriptChunk chunk : script.getChunks()) {
-                    // TODO(miron) what is a good minimum data length for the filter?
-                    if (!chunk.isOpCode() && chunk.data.length >= 8) {
+                    // Only add long (at least 64 bit) data to the bloom filter.
+                    // If any long constants become popular in scripts, we will need logic
+                    // here to exclude them.
+                    if (!chunk.isOpCode() && chunk.data.length >= MINIMUM_BLOOM_DATA_LENGTH) {
                         filter.insert(chunk.data);
                     }
                 }

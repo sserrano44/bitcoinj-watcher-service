@@ -793,7 +793,7 @@ public class WalletTest extends TestWithWallet {
         // Check we got them back in order.
         List<Transaction> transactions = wallet.getTransactionsByTime();
         assertEquals(tx2, transactions.get(0));
-        assertEquals(tx1,  transactions.get(1));
+        assertEquals(tx1, transactions.get(1));
         assertEquals(2, transactions.size());
         // Check we get only the last transaction if we request a subrage.
         transactions = wallet.getRecentTransactions(1, false);
@@ -924,7 +924,7 @@ public class WalletTest extends TestWithWallet {
     }
 
     @Test
-    public void watchingScripts_confirmed() throws Exception {
+    public void watchingScriptsConfirmed() throws Exception {
         ECKey key = new ECKey();
         Address watchedAddress = key.toAddress(params);
         wallet.addWatchedAddress(watchedAddress);
@@ -937,6 +937,25 @@ public class WalletTest extends TestWithWallet {
         // We can't spend watched balances
         Address notMyAddr = new ECKey().toAddress(params);
         assertNull(wallet.createSend(notMyAddr, CENT));
+    }
+
+    @Test
+    public void watchingScriptsSentFrom() throws Exception {
+        ECKey key = new ECKey();
+        ECKey notMyAddr = new ECKey();
+        Address watchedAddress = key.toAddress(params);
+        wallet.addWatchedAddress(watchedAddress);
+        Transaction t1 = createFakeTx(params, CENT, watchedAddress);
+        Transaction t2 = createFakeTx(params, COIN, notMyAddr);
+        StoredBlock b1 = createFakeBlock(blockStore, t1).storedBlock;
+        Transaction st2 = new Transaction(params);
+        st2.addOutput(CENT, notMyAddr);
+        st2.addOutput(COIN, notMyAddr);
+        st2.addInput(t1.getOutput(0));
+        st2.addInput(t2.getOutput(0));
+        wallet.receiveFromBlock(t1, b1, BlockChain.NewBlockType.BEST_CHAIN, 0);
+        wallet.receiveFromBlock(st2, b1, BlockChain.NewBlockType.BEST_CHAIN, 0);
+        assertEquals(CENT, st2.getValueSentFromMe(wallet));
     }
 
     @Test
