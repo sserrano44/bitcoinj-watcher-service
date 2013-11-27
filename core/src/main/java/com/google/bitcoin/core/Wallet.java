@@ -2981,7 +2981,17 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
 
         return size;
     }
-    
+
+    /**
+     * If we are watching any scripts, the bloom filter must update on peers whenever an output is
+     * identified.  This is because we don't necessarily have the associated pubkey, so we can't
+     * watch for it on spending transactions.
+     */
+    @Override
+    public boolean isRequiringUpdateAllBloomFilter() {
+        return !watchedScripts.isEmpty();
+    }
+
     /**
      * Gets a bloom filter that contains all of the public keys from this wallet, and which will provide the given
      * false-positive rate. See the docs for {@link BloomFilter} for a brief explanation of anonymity when using filters.
@@ -3027,7 +3037,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             for (int i = 0; i < tx.getOutputs().size(); i++) {
                 TransactionOutput out = tx.getOutputs().get(i);
                 try {
-                    if (out.isMine(this) && out.getScriptPubKey().isSentToRawPubKey()) {
+                    if ((out.isMine(this) && out.getScriptPubKey().isSentToRawPubKey()) ||
+                            out.isWatched(this)) {
                         TransactionOutPoint outPoint = new TransactionOutPoint(params, i, tx);
                         filter.insert(outPoint.bitcoinSerialize());
                     }

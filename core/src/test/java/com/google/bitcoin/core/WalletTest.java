@@ -959,6 +959,27 @@ public class WalletTest extends TestWithWallet {
     }
 
     @Test
+    public void watchingScriptsBloomFilter() throws Exception {
+        assertFalse(wallet.isRequiringUpdateAllBloomFilter());
+
+        ECKey key = new ECKey();
+        Address watchedAddress = key.toAddress(params);
+        wallet.addWatchedAddress(watchedAddress);
+
+        assertTrue(wallet.isRequiringUpdateAllBloomFilter());
+        Transaction t1 = createFakeTx(params, CENT, watchedAddress);
+        StoredBlock b1 = createFakeBlock(blockStore, t1).storedBlock;
+
+        TransactionOutPoint outPoint = new TransactionOutPoint(params, 0, t1);
+
+        // Note that this has a 1e-12 chance of failing this unit test due to a false positive
+        assertFalse(wallet.getBloomFilter(1e-12).contains(outPoint.bitcoinSerialize()));
+
+        wallet.receiveFromBlock(t1, b1, BlockChain.NewBlockType.BEST_CHAIN, 0);
+        assertTrue(wallet.getBloomFilter(1e-12).contains(outPoint.bitcoinSerialize()));
+    }
+
+    @Test
     public void autosaveImmediate() throws Exception {
         // Test that the wallet will save itself automatically when it changes.
         File f = File.createTempFile("bitcoinj-unit-test", null);
