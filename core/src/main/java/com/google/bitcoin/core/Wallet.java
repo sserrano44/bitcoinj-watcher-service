@@ -2065,14 +2065,22 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         return isWatchedScript(script);
     }
 
+    /** See {@link #addWatchedAddress(Address, long)} */
+    public boolean addWatchedAddress(final Address address) {
+        long now = Utils.now().getTime() / 1000;
+        return addWatchedAddresses(Lists.newArrayList(address), now) == 1;
+    }
+
     /**
      * Adds the given address to the wallet to be watched. Outputs can be retrieved
      * by {@link #getWatchedOutputs(boolean)}.
      *
+     * @param creationTime creation time in seconds since the epoch, for scanning the blockchain
+     *
      * @return whether the address was added successfully (not already present)
      */
-    public boolean addWatchedAddress(final Address address) {
-        return addWatchedAddresses(Lists.newArrayList(address)) == 1;
+    public boolean addWatchedAddress(final Address address, long creationTime) {
+        return addWatchedAddresses(Lists.newArrayList(address), creationTime) == 1;
     }
 
     /**
@@ -2081,11 +2089,12 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      *
      * @return how many addresses were added successfully
      */
-    public int addWatchedAddresses(final List<Address> addresses) {
+    public int addWatchedAddresses(final List<Address> addresses, long creationTime) {
         List<Script> scripts = Lists.newArrayList();
 
         for (Address address : addresses) {
             Script script = ScriptBuilder.createOutputScript(address);
+            script.setCreationTimeSeconds(creationTime);
             scripts.add(script);
         }
 
@@ -2564,8 +2573,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     }
 
     /**
-     * Returns the earliest creation time of the keys in this wallet, in seconds since the epoch, ie the min of 
-     * {@link com.google.bitcoin.core.ECKey#getCreationTimeSeconds()}. This can return zero if at least one key does
+     * Returns the earliest creation time of keys or watched scripts in this wallet, in seconds since the epoch, ie the min
+     * of {@link com.google.bitcoin.core.ECKey#getCreationTimeSeconds()}. This can return zero if at least one key does
      * not have that data (was created before key timestamping was implemented). <p>
      *     
      * This method is most often used in conjunction with {@link PeerGroup#setFastCatchupTimeSecs(long)} in order to
@@ -2585,6 +2594,10 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             long earliestTime = Long.MAX_VALUE;
             for (ECKey key : keychain) {
                 earliestTime = Math.min(key.getCreationTimeSeconds(), earliestTime);
+            }
+
+            for (Script script : watchedScripts) {
+                earliestTime = Math.min(script.getCreationTimeSeconds(), earliestTime);
             }
             return earliestTime;
         } finally {
@@ -2999,7 +3012,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     public BloomFilter getBloomFilter(double falsePositiveRate) {
         return getBloomFilter(getBloomFilterElementCount(), falsePositiveRate, (long)(Math.random()*Long.MAX_VALUE));
     }
-    
+
     /**
      * Gets a bloom filter that contains all of the public keys from this wallet,
      * and which will provide the given false-positive rate if it has size elements.

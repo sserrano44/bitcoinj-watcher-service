@@ -836,6 +836,20 @@ public class WalletTest extends TestWithWallet {
     }
 
     @Test
+    public void scriptCreationTime() throws Exception {
+        wallet = new Wallet(params);
+        long now = Utils.rollMockClock(0).getTime() / 1000;  // Fix the mock clock.
+        // No keys returns current time.
+        assertEquals(now, wallet.getEarliestKeyCreationTime());
+        Utils.rollMockClock(60);
+        wallet.addWatchedAddress(new ECKey().toAddress(params));
+
+        Utils.rollMockClock(60);
+        wallet.addKey(new ECKey());
+        assertEquals(now + 60, wallet.getEarliestKeyCreationTime());
+    }
+
+    @Test
     public void spendToSameWallet() throws Exception {
         // Test that a spend to the same wallet is dealt with correctly.
         // It should appear in the wallet and confirm.
