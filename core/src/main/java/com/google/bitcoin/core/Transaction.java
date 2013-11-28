@@ -340,7 +340,7 @@ public class Transaction extends ChildMessage implements Serializable {
                 continue;
             // The connected output may be the change to the sender of a previous input sent to this wallet. In this
             // case we ignore it.
-            if (!connected.isMine(wallet))
+            if (!connected.isMineOrWatched(wallet))
                 continue;
             v = v.add(connected.getValue());
         }

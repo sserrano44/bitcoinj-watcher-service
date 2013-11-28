@@ -61,6 +61,9 @@ public class Script {
     // must preserve the exact bytes that we read off the wire, along with the parsed form.
     protected byte[] program;
 
+    // Creation time of the associated keys in seconds since the epoch.
+    private long creationTimeSeconds;
+
     /** Creates an empty script that serializes to nothing. */
     private Script() {
         chunks = Lists.newArrayList();
@@ -69,6 +72,7 @@ public class Script {
     // Used from ScriptBuilder.
     Script(List<ScriptChunk> chunks) {
         this.chunks = Collections.unmodifiableList(new ArrayList<ScriptChunk>(chunks));
+        creationTimeSeconds = Utils.now().getTime() / 1000;
     }
 
     /**
@@ -79,6 +83,21 @@ public class Script {
     public Script(byte[] programBytes) throws ScriptException {
         program = programBytes;
         parse(programBytes);
+        creationTimeSeconds = Utils.now().getTime() / 1000;
+    }
+
+    public Script(byte[] programBytes, long creationTimeSeconds) throws ScriptException {
+        program = programBytes;
+        parse(programBytes);
+        this.creationTimeSeconds = creationTimeSeconds;
+    }
+
+    public long getCreationTimeSeconds() {
+        return creationTimeSeconds;
+    }
+
+    public void setCreationTimeSeconds(long creationTimeSeconds) {
+        this.creationTimeSeconds = creationTimeSeconds;
     }
 
     /**
@@ -97,6 +116,11 @@ public class Script {
                 buf.append("] ");
             }
         }
+
+        if (creationTimeSeconds != 0) {
+            buf.append(" timestamp:").append(creationTimeSeconds);
+        }
+
         return buf.toString();
     }
 
@@ -1247,7 +1271,6 @@ public class Script {
     @Override
     public int hashCode() {
         byte[] bytes = getQuickProgram();
-        if (bytes.length < 6) return 0; // Unlikely
-        return (bytes[2] & 0xFF) | ((bytes[3] & 0xFF) << 8) | ((bytes[4] & 0xFF) << 16) | ((bytes[5] & 0xFF) << 24);
+        return Arrays.hashCode(bytes);
     }
 }

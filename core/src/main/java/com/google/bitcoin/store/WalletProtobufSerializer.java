@@ -86,7 +86,7 @@ public class WalletProtobufSerializer {
 
     /**
      * Formats the given wallet (transactions and keys) to the given output stream in protocol buffer format.<p>
-     *     
+     *
      * Equivalent to <tt>walletToProto(wallet).writeTo(output);</tt>
      */
     public void writeWallet(Wallet wallet, OutputStream output) throws IOException {
@@ -158,7 +158,13 @@ public class WalletProtobufSerializer {
         }
 
         for (Script script : wallet.getWatchedScripts()) {
-            walletBuilder.addWatchedScript(ByteString.copyFrom(script.getProgram()));
+            Protos.Script protoScript =
+                    Protos.Script.newBuilder()
+                            .setProgram(ByteString.copyFrom(script.getProgram()))
+                            .setCreationTimestamp(script.getCreationTimeSeconds() * 1000)
+                            .build();
+
+            walletBuilder.addWatchedScript(protoScript);
         }
 
         // Populate the lastSeenBlockHash field.
@@ -411,9 +417,12 @@ public class WalletProtobufSerializer {
         }
 
         List<Script> scripts = Lists.newArrayList();
-        for (ByteString scriptBytes : walletProto.getWatchedScriptList()) {
+        for (Protos.Script protoScript : walletProto.getWatchedScriptList()) {
             try {
-                scripts.add(new Script(scriptBytes.toByteArray()));
+                Script script =
+                        new Script(protoScript.getProgram().toByteArray(),
+                                protoScript.getCreationTimestamp() / 1000);
+                scripts.add(script);
             } catch (ScriptException e) {
                 throw new UnreadableWalletException("Unparseable script in wallet");
             }

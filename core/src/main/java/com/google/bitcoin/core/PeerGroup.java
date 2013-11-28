@@ -680,9 +680,11 @@ public class PeerGroup extends AbstractIdleService implements TransactionBroadca
                 return;
             long earliestKeyTimeSecs = Long.MAX_VALUE;
             int elements = 0;
+            boolean requiresUpdateAll = false;
             for (PeerFilterProvider p : peerFilterProviders) {
                 earliestKeyTimeSecs = Math.min(earliestKeyTimeSecs, p.getEarliestKeyCreationTime());
                 elements += p.getBloomFilterElementCount();
+                requiresUpdateAll = requiresUpdateAll || p.isRequiringUpdateAllBloomFilter();
             }
 
             if (elements > 0) {
@@ -691,7 +693,9 @@ public class PeerGroup extends AbstractIdleService implements TransactionBroadca
                 // The constant 100 here is somewhat arbitrary, but makes sense for small to medium wallets -
                 // it will likely mean we never need to create a filter with different parameters.
                 lastBloomFilterElementCount = elements > lastBloomFilterElementCount ? elements + 100 : lastBloomFilterElementCount;
-                BloomFilter filter = new BloomFilter(lastBloomFilterElementCount, bloomFilterFPRate, bloomFilterTweak);
+                BloomFilter.BloomUpdate bloomFlags =
+                        requiresUpdateAll ? BloomFilter.BloomUpdate.UPDATE_ALL : BloomFilter.BloomUpdate.UPDATE_P2PUBKEY_ONLY;
+                BloomFilter filter = new BloomFilter(lastBloomFilterElementCount, bloomFilterFPRate, bloomFilterTweak, bloomFlags);
                 for (PeerFilterProvider p : peerFilterProviders)
                     filter.merge(p.getBloomFilter(lastBloomFilterElementCount, bloomFilterFPRate, bloomFilterTweak));
                 if (!filter.equals(bloomFilter)) {

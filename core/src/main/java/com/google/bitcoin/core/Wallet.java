@@ -98,6 +98,7 @@ import static com.google.common.base.Preconditions.*;
 public class Wallet implements Serializable, BlockChainListener, PeerFilterProvider {
     private static final Logger log = LoggerFactory.getLogger(Wallet.class);
     private static final long serialVersionUID = 2L;
+    private static final int MINIMUM_BLOOM_DATA_LENGTH = 8;
 
     protected final ReentrantLock lock = Threading.lock("wallet");
 
@@ -2062,17 +2063,25 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      */
     public boolean isAddressWatched(Address address) {
         Script script = ScriptBuilder.createOutputScript(address);
-        return watchedScripts.contains(script);
+        return isWatchedScript(script);
+    }
+
+    /** See {@link #addWatchedAddress(Address, long)} */
+    public boolean addWatchedAddress(final Address address) {
+        long now = Utils.now().getTime() / 1000;
+        return addWatchedAddresses(Lists.newArrayList(address), now) == 1;
     }
 
     /**
      * Adds the given address to the wallet to be watched. Outputs can be retrieved
      * by {@link #getWatchedOutputs(boolean)}.
      *
+     * @param creationTime creation time in seconds since the epoch, for scanning the blockchain
+     *
      * @return whether the address was added successfully (not already present)
      */
-    public boolean addWatchedAddress(final Address address) {
-        return addWatchedAddresses(Lists.newArrayList(address)) == 1;
+    public boolean addWatchedAddress(final Address address, long creationTime) {
+        return addWatchedAddresses(Lists.newArrayList(address), creationTime) == 1;
     }
 
     /**
@@ -2081,11 +2090,12 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      *
      * @return how many addresses were added successfully
      */
-    public int addWatchedAddresses(final List<Address> addresses) {
+    public int addWatchedAddresses(final List<Address> addresses, long creationTime) {
         List<Script> scripts = Lists.newArrayList();
 
         for (Address address : addresses) {
             Script script = ScriptBuilder.createOutputScript(address);
+            script.setCreationTimeSeconds(creationTime);
             scripts.add(script);
         }
 
@@ -2152,8 +2162,14 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         return findKeyFromPubHash(pubkeyHash) != null;
     }
 
+    /** Returns true if this wallet is watching transactions for outputs with the script. */
     public boolean isWatchedScript(Script script) {
-        return watchedScripts.contains(script);
+        lock.lock();
+        try {
+            return watchedScripts.contains(script);
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -2574,8 +2590,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     }
 
     /**
-     * Returns the earliest creation time of the keys in this wallet, in seconds since the epoch, ie the min of 
-     * {@link com.google.bitcoin.core.ECKey#getCreationTimeSeconds()}. This can return zero if at least one key does
+     * Returns the earliest creation time of keys or watched scripts in this wallet, in seconds since the epoch, ie the min
+     * of {@link com.google.bitcoin.core.ECKey#getCreationTimeSeconds()}. This can return zero if at least one key does
      * not have that data (was created before key timestamping was implemented). <p>
      *     
      * This method is most often used in conjunction with {@link PeerGroup#setFastCatchupTimeSecs(long)} in order to
@@ -2595,6 +2611,10 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             long earliestTime = Long.MAX_VALUE;
             for (ECKey key : keychain) {
                 earliestTime = Math.min(key.getCreationTimeSeconds(), earliestTime);
+            }
+
+            for (Script script : watchedScripts) {
+                earliestTime = Math.min(script.getCreationTimeSeconds(), earliestTime);
             }
             return earliestTime;
         } finally {
@@ -2985,12 +3005,23 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             }
         }
 
-        // TODO(miron) some scripts may have more than one bloom element
+        // Some scripts may have more than one bloom element.  That should normally be okay,
+        // because under-counting just increases false-positive rate.
         size += watchedScripts.size();
 
         return size;
     }
-    
+
+    /**
+     * If we are watching any scripts, the bloom filter must update on peers whenever an output is
+     * identified.  This is because we don't necessarily have the associated pubkey, so we can't
+     * watch for it on spending transactions.
+     */
+    @Override
+    public boolean isRequiringUpdateAllBloomFilter() {
+        return !watchedScripts.isEmpty();
+    }
+
     /**
      * Gets a bloom filter that contains all of the public keys from this wallet, and which will provide the given
      * false-positive rate. See the docs for {@link BloomFilter} for a brief explanation of anonymity when using filters.
@@ -2998,7 +3029,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     public BloomFilter getBloomFilter(double falsePositiveRate) {
         return getBloomFilter(getBloomFilterElementCount(), falsePositiveRate, (long)(Math.random()*Long.MAX_VALUE));
     }
-    
+
     /**
      * Gets a bloom filter that contains all of the public keys from this wallet,
      * and which will provide the given false-positive rate if it has size elements.
@@ -3021,8 +3052,10 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
 
             for (Script script : watchedScripts) {
                 for (ScriptChunk chunk : script.getChunks()) {
-                    // TODO(miron) what is a good minimum data length for the filter?
-                    if (!chunk.isOpCode() && chunk.data.length >= 8) {
+                    // Only add long (at least 64 bit) data to the bloom filter.
+                    // If any long constants become popular in scripts, we will need logic
+                    // here to exclude them.
+                    if (!chunk.isOpCode() && chunk.data.length >= MINIMUM_BLOOM_DATA_LENGTH) {
                         filter.insert(chunk.data);
                     }
                 }
@@ -3034,7 +3067,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             for (int i = 0; i < tx.getOutputs().size(); i++) {
                 TransactionOutput out = tx.getOutputs().get(i);
                 try {
-                    if (out.isMine(this) && out.getScriptPubKey().isSentToRawPubKey()) {
+                    if ((out.isMine(this) && out.getScriptPubKey().isSentToRawPubKey()) ||
+                            out.isWatched(this)) {
                         TransactionOutPoint outPoint = new TransactionOutPoint(params, i, tx);
                         filter.insert(outPoint.bitcoinSerialize());
                     }

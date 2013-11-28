@@ -793,7 +793,7 @@ public class WalletTest extends TestWithWallet {
         // Check we got them back in order.
         List<Transaction> transactions = wallet.getTransactionsByTime();
         assertEquals(tx2, transactions.get(0));
-        assertEquals(tx1,  transactions.get(1));
+        assertEquals(tx1, transactions.get(1));
         assertEquals(2, transactions.size());
         // Check we get only the last transaction if we request a subrage.
         transactions = wallet.getRecentTransactions(1, false);
@@ -830,6 +830,20 @@ public class WalletTest extends TestWithWallet {
         Utils.rollMockClock(60);
         wallet.addKey(new ECKey());
         assertEquals(now + 60, wallet.getEarliestKeyCreationTime());
+        Utils.rollMockClock(60);
+        wallet.addKey(new ECKey());
+        assertEquals(now + 60, wallet.getEarliestKeyCreationTime());
+    }
+
+    @Test
+    public void scriptCreationTime() throws Exception {
+        wallet = new Wallet(params);
+        long now = Utils.rollMockClock(0).getTime() / 1000;  // Fix the mock clock.
+        // No keys returns current time.
+        assertEquals(now, wallet.getEarliestKeyCreationTime());
+        Utils.rollMockClock(60);
+        wallet.addWatchedAddress(new ECKey().toAddress(params));
+
         Utils.rollMockClock(60);
         wallet.addKey(new ECKey());
         assertEquals(now + 60, wallet.getEarliestKeyCreationTime());
@@ -924,7 +938,7 @@ public class WalletTest extends TestWithWallet {
     }
 
     @Test
-    public void watchingScripts_confirmed() throws Exception {
+    public void watchingScriptsConfirmed() throws Exception {
         ECKey key = new ECKey();
         Address watchedAddress = key.toAddress(params);
         wallet.addWatchedAddress(watchedAddress);
@@ -937,6 +951,46 @@ public class WalletTest extends TestWithWallet {
         // We can't spend watched balances
         Address notMyAddr = new ECKey().toAddress(params);
         assertNull(wallet.createSend(notMyAddr, CENT));
+    }
+
+    @Test
+    public void watchingScriptsSentFrom() throws Exception {
+        ECKey key = new ECKey();
+        ECKey notMyAddr = new ECKey();
+        Address watchedAddress = key.toAddress(params);
+        wallet.addWatchedAddress(watchedAddress);
+        Transaction t1 = createFakeTx(params, CENT, watchedAddress);
+        Transaction t2 = createFakeTx(params, COIN, notMyAddr);
+        StoredBlock b1 = createFakeBlock(blockStore, t1).storedBlock;
+        Transaction st2 = new Transaction(params);
+        st2.addOutput(CENT, notMyAddr);
+        st2.addOutput(COIN, notMyAddr);
+        st2.addInput(t1.getOutput(0));
+        st2.addInput(t2.getOutput(0));
+        wallet.receiveFromBlock(t1, b1, BlockChain.NewBlockType.BEST_CHAIN, 0);
+        wallet.receiveFromBlock(st2, b1, BlockChain.NewBlockType.BEST_CHAIN, 0);
+        assertEquals(CENT, st2.getValueSentFromMe(wallet));
+    }
+
+    @Test
+    public void watchingScriptsBloomFilter() throws Exception {
+        assertFalse(wallet.isRequiringUpdateAllBloomFilter());
+
+        ECKey key = new ECKey();
+        Address watchedAddress = key.toAddress(params);
+        wallet.addWatchedAddress(watchedAddress);
+
+        assertTrue(wallet.isRequiringUpdateAllBloomFilter());
+        Transaction t1 = createFakeTx(params, CENT, watchedAddress);
+        StoredBlock b1 = createFakeBlock(blockStore, t1).storedBlock;
+
+        TransactionOutPoint outPoint = new TransactionOutPoint(params, 0, t1);
+
+        // Note that this has a 1e-12 chance of failing this unit test due to a false positive
+        assertFalse(wallet.getBloomFilter(1e-12).contains(outPoint.bitcoinSerialize()));
+
+        wallet.receiveFromBlock(t1, b1, BlockChain.NewBlockType.BEST_CHAIN, 0);
+        assertTrue(wallet.getBloomFilter(1e-12).contains(outPoint.bitcoinSerialize()));
     }
 
     @Test
