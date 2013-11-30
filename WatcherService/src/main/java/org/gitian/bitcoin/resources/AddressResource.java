@@ -106,7 +106,9 @@ public class AddressResource {
                 Address address = new Address(wallet.getNetworkParameters(), addressString);
                 addresses.add(address);
             }
-            return wallet.addWatchedAddresses(addresses) == addresses.size();
+            long now = Utils.now().getTime() / 1000;
+
+            return wallet.addWatchedAddresses(addresses, now) == addresses.size();
         }
 
         return false;
@@ -139,7 +141,9 @@ public class AddressResource {
             addresses.add(key.toAddress(wallet.getNetworkParameters()));
         }
 
-        return wallet.addWatchedAddresses(addresses);
+        long now = Utils.now().getTime() / 1000;
+
+        return wallet.addWatchedAddresses(addresses, now);
     }
 
     @GET @Path("/check")
