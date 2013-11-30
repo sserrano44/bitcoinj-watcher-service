@@ -24,6 +24,7 @@ import com.yammer.metrics.annotation.Timed;
 import org.gitian.bitcoin.core.Balance;
 import org.gitian.bitcoin.core.ListeningAddress;
 import org.gitian.bitcoin.core.TxOut;
+import org.spongycastle.util.encoders.Hex;
 
 import java.math.BigInteger;
 import java.util.Collection;
@@ -87,7 +88,9 @@ public class AddressResource {
         for (TransactionOutput output : selection.gathered) {
             Transaction tx = output.getParentTransaction();
             int index = tx.getOutputs().indexOf(output);
-            outputs.add(new TxOut(tx.getHashAsString(), index, output, tx.getConfidence().getDepthInBlocks()));
+            byte[] txHash = Utils.reverseBytes(tx.getHash().getBytes());
+            outputs.add(new TxOut(Utils.bytesToHexString(txHash), index, output,
+                    tx.getConfidence().getDepthInBlocks()));
         }
         return outputs;
     }
