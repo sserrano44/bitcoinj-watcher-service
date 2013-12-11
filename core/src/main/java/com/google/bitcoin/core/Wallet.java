@@ -29,7 +29,6 @@ import com.google.bitcoin.store.WalletProtobufSerializer;
 import com.google.bitcoin.utils.ListenerRegistration;
 import com.google.bitcoin.utils.Threading;
 import com.google.bitcoin.wallet.*;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.FutureCallback;
@@ -748,6 +747,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             outpoints.add(input.getOutpoint());
         }
         // Now for each pending transaction, see if it shares any outpoints with this tx.
+        LinkedList<Transaction> doubleSpentTxns = Lists.newLinkedList();
         for (Transaction p : pending.values()) {
             for (TransactionInput input : p.getInputs()) {
                 // This relies on the fact that TransactionOutPoint equality is defined at the protocol not object
@@ -755,19 +755,15 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 TransactionOutPoint outpoint = input.getOutpoint();
                 if (outpoints.contains(outpoint)) {
                     // It does, it's a double spend against the pending pool, which makes it relevant.
-                    if (takeAction) {
-                        // Look for the actual input object in tx that is double spending.
-                        TransactionInput overridingInput = null;
-                        for (TransactionInput txInput : tx.getInputs()) {
-                            if (txInput.getOutpoint().equals(outpoint)) overridingInput = txInput;
-                        }
-                        killTx(tx, checkNotNull(overridingInput), p);
-                    }
-                    return true;
+                    if (!doubleSpentTxns.isEmpty() && doubleSpentTxns.getLast() == p) continue;
+                    doubleSpentTxns.add(p);
                 }
             }
         }
-        return false;
+        if (takeAction && !doubleSpentTxns.isEmpty()) {
+            killTx(tx, doubleSpentTxns);
+        }
+        return !doubleSpentTxns.isEmpty();
     }
 
     /**
@@ -1103,50 +1099,47 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         }
     }
 
-    // Updates the wallet when a double spend occurs.
-    private void killTx(Transaction overridingTx, TransactionInput overridingInput, Transaction killedTx) {
-        final Sha256Hash killedTxHash = killedTx.getHash();
-        if (overridingTx == null) {
-            // killedTx depended on a transaction that died because it was double spent or a coinbase that got re-orgd.
-            killedTx.getConfidence().setOverridingTransaction(null);
-            confidenceChanged.put(killedTx, TransactionConfidence.Listener.ChangeReason.TYPE);
-            pending.remove(killedTxHash);
-            unspent.remove(killedTxHash);
-            spent.remove(killedTxHash);
-            addWalletTransaction(Pool.DEAD, killedTx);
-            // TODO: Properly handle the recursive nature of killing transactions here.
-            return;
+    private void killCoinbase(Transaction coinbase) {
+        log.warn("Coinbase killed by re-org: {}", coinbase.getHashAsString());
+        coinbase.getConfidence().setOverridingTransaction(null);
+        confidenceChanged.put(coinbase, TransactionConfidence.Listener.ChangeReason.TYPE);
+        final Sha256Hash hash = coinbase.getHash();
+        pending.remove(hash);
+        unspent.remove(hash);
+        spent.remove(hash);
+        addWalletTransaction(Pool.DEAD, coinbase);
+        // TODO: Properly handle the recursive nature of killing transactions here.
+    }
+
+    // Updates the wallet when a double spend occurs. overridingTx/overridingInput can be null for the case of coinbases
+    private void killTx(Transaction overridingTx, List<Transaction> killedTx) {
+        for (Transaction tx : killedTx) {
+            log.warn("Saw double spend from chain override pending tx {}", tx.getHashAsString());
+            log.warn("  <-pending ->dead   killed by {}", overridingTx.getHashAsString());
+            log.warn("Disconnecting each input and moving connected transactions.");
+            pending.remove(tx.getHash());
+            addWalletTransaction(Pool.DEAD, tx);
+            for (TransactionInput deadInput : tx.getInputs()) {
+                Transaction connected = deadInput.getOutpoint().fromTx;
+                if (connected == null) continue;
+                deadInput.disconnect();
+                maybeMovePool(connected, "kill");
+            }
+            tx.getConfidence().setOverridingTransaction(overridingTx);
+            confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
         }
-        TransactionOutPoint overriddenOutPoint = overridingInput.getOutpoint();
-        // It is expected that we may not have the overridden/double-spent tx in our wallet ... in the (common?!) case
-        // where somebody is stealing money from us, the overriden tx belongs to someone else.
-        log.warn("Saw double spend of {} from chain override pending tx {}",
-                overriddenOutPoint, killedTx.getHashAsString());
-        log.warn("  <-pending ->dead   killed by {}", overridingTx.getHashAsString());
-        pending.remove(killedTxHash);
-        addWalletTransaction(Pool.DEAD, killedTx);
-        log.info("Disconnecting inputs of the newly dead tx");
-        for (TransactionInput deadInput : killedTx.getInputs()) {
-            Transaction connected = deadInput.getOutpoint().fromTx;
-            if (connected == null) continue;
-            deadInput.disconnect();
-            maybeMovePool(connected, "kill");
-        }
-        // Try and connect the overriding input to something in our wallet. It's expected that this will mostly fail
-        // because when somebody else is double-spending away a payment they made to us, we won't have the overridden
-        // tx as it's not ours to begin with. It'll only be found if we're double spending our own payments.
-        log.info("Trying to connect overriding tx back");
-        TransactionInput.ConnectionResult result = overridingInput.connect(unspent, TransactionInput.ConnectMode.DISCONNECT_ON_CONFLICT);
-        if (result == TransactionInput.ConnectionResult.SUCCESS) {
-            maybeMovePool(overridingInput.getOutpoint().fromTx, "kill");
-        } else {
-            result = overridingInput.connect(spent, TransactionInput.ConnectMode.DISCONNECT_ON_CONFLICT);
+        log.warn("Now attempting to connect the inputs of the overriding transaction.");
+        for (TransactionInput input : overridingTx.getInputs()) {
+            TransactionInput.ConnectionResult result = input.connect(unspent, TransactionInput.ConnectMode.DISCONNECT_ON_CONFLICT);
             if (result == TransactionInput.ConnectionResult.SUCCESS) {
-                maybeMovePool(overridingInput.getOutpoint().fromTx, "kill");
+                maybeMovePool(input.getOutpoint().fromTx, "kill");
+            } else {
+                result = input.connect(spent, TransactionInput.ConnectMode.DISCONNECT_ON_CONFLICT);
+                if (result == TransactionInput.ConnectionResult.SUCCESS) {
+                    maybeMovePool(input.getOutpoint().fromTx, "kill");
+                }
             }
         }
-        killedTx.getConfidence().setOverridingTransaction(overridingTx);
-        confidenceChanged.put(killedTx, TransactionConfidence.Listener.ChangeReason.TYPE);
         // TODO: Recursively kill other transactions that were double spent.
     }
 
@@ -1667,15 +1660,12 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * @param nanocoins     How much currency to send, in nanocoins.
      * @return either the created Transaction or null if there are insufficient coins.
      * coins as spent until commitTx is called on the result.
+     * @throws InsufficientMoneyException if the request could not be completed due to not enough balance.
      */
-    @Nullable
-    public Transaction createSend(Address address, BigInteger nanocoins) {
+    public Transaction createSend(Address address, BigInteger nanocoins) throws InsufficientMoneyException {
         SendRequest req = SendRequest.to(address, nanocoins);
-        if (completeTx(req)) {
-            return req.tx;
-        } else {
-            return null;  // No money.
-        }
+        completeTx(req);
+        return req.tx;
     }
 
     /**
@@ -1684,18 +1674,15 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * announced to the network. The given {@link SendRequest} is completed first using
      * {@link Wallet#completeTx(Wallet.SendRequest)} to make it valid.
      *
-     * @return the Transaction that was created, or null if there are insufficient coins in the wallet.
+     * @return the Transaction that was created
+     * @throws InsufficientMoneyException if the request could not be completed due to not enough balance.
      */
-    @Nullable
-    public Transaction sendCoinsOffline(SendRequest request) {
+    public Transaction sendCoinsOffline(SendRequest request) throws InsufficientMoneyException {
         lock.lock();
         try {
-            if (!completeTx(request))
-                return null;  // Not enough money! :-(
+            completeTx(request);
             commitTx(request.tx);
             return request.tx;
-        } catch (VerificationException e) {
-            throw new RuntimeException(e);  // Cannot happen unless there's a bug, as we just created this ourselves.
         } finally {
             lock.unlock();
         }
@@ -1721,9 +1708,9 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * @param to        Which address to send coins to.
      * @param value     How much value to send. You can use Utils.toNanoCoins() to calculate this.
      * @return An object containing the transaction that was created, and a future for the broadcast of it.
+     * @throws InsufficientMoneyException if the request could not be completed due to not enough balance.
      */
-    @Nullable
-    public SendResult sendCoins(TransactionBroadcaster broadcaster, Address to, BigInteger value) {
+    public SendResult sendCoins(TransactionBroadcaster broadcaster, Address to, BigInteger value) throws InsufficientMoneyException {
         SendRequest request = SendRequest.to(to, value);
         return sendCoins(broadcaster, request);
     }
@@ -1742,9 +1729,9 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * @param broadcaster the target to use for broadcast.
      * @param request the SendRequest that describes what to do, get one using static methods on SendRequest itself.
      * @return An object containing the transaction that was created, and a future for the broadcast of it.
+     * @throws InsufficientMoneyException if the request could not be completed due to not enough balance.
      */
-    @Nullable
-    public SendResult sendCoins(TransactionBroadcaster broadcaster, SendRequest request) {
+    public SendResult sendCoins(TransactionBroadcaster broadcaster, SendRequest request) throws InsufficientMoneyException {
         // Should not be locked here, as we're going to call into the broadcaster and that might want to hold its
         // own lock. sendCoinsOffline handles everything that needs to be locked.
         checkState(!lock.isHeldByCurrentThread());
@@ -1752,8 +1739,6 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         // Commit the TX to the wallet immediately so the spent coins won't be reused.
         // TODO: We should probably allow the request to specify tx commit only after the network has accepted it.
         Transaction tx = sendCoinsOffline(request);
-        if (tx == null)
-            return null;  // Not enough money.
         SendResult result = new SendResult();
         result.tx = tx;
         // The tx has been committed to the pending pool by this point (via sendCoinsOffline -> commitTx), so it has
@@ -1772,9 +1757,9 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * @param request the SendRequest that describes what to do, get one using static methods on SendRequest itself.
      * @return An object containing the transaction that was created, and a future for the broadcast of it.
      * @throws IllegalStateException if no transaction broadcaster has been configured.
+     * @throws InsufficientMoneyException if the request could not be completed due to not enough balance.
      */
-    @Nullable
-    public SendResult sendCoins(SendRequest request) {
+    public SendResult sendCoins(SendRequest request) throws InsufficientMoneyException {
         TransactionBroadcaster broadcaster = vTransactionBroadcaster;
         checkState(broadcaster != null, "No transaction broadcaster is configured");
         return sendCoins(broadcaster, request);
@@ -1787,13 +1772,11 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * if one may be required for the transaction to be confirmed.
      *
      * @return The {@link Transaction} that was created or null if there was insufficient balance to send the coins.
+     * @throws InsufficientMoneyException if the request could not be completed due to not enough balance.
      * @throws IOException if there was a problem broadcasting the transaction
      */
-    @Nullable
-    public Transaction sendCoins(Peer peer, SendRequest request) throws IOException {
+    public Transaction sendCoins(Peer peer, SendRequest request) throws InsufficientMoneyException {
         Transaction tx = sendCoinsOffline(request);
-        if (tx == null)
-            return null;  // Not enough money.
         peer.sendMessage(tx);
         return tx;
     }
@@ -1804,13 +1787,14 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
      * the fee parameter.
      *
      * @param req a SendRequest that contains the incomplete transaction and details for how to make it valid.
-     * @throws IllegalArgumentException if you try and complete the same SendRequest twice.
-     * @return whether or not the requested send is affordable.
+     * @throws InsufficientMoneyException if the request could not be completed due to not enough balance.
+     * @throws IllegalArgumentException if you try and complete the same SendRequest twice, or if the given send request
+     *         cannot be completed without violating the protocol rules.
      */
-    public boolean completeTx(SendRequest req) {
+    public void completeTx(SendRequest req) throws InsufficientMoneyException {
         lock.lock();
         try {
-            Preconditions.checkArgument(!req.completed, "Given SendRequest has already been completed.");
+            checkArgument(!req.completed, "Given SendRequest has already been completed.");
             // Calculate the amount of value we need to import.
             BigInteger value = BigInteger.ZERO;
             for (TransactionOutput output : req.tx.getOutputs()) {
@@ -1837,10 +1821,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             if (req.ensureMinRequiredFee && !req.emptyWallet) { // min fee checking is handled later for emptyWallet
                 for (TransactionOutput output : req.tx.getOutputs())
                     if (output.getValue().compareTo(Utils.CENT) < 0) {
-                        if (output.getValue().compareTo(output.getMinNonDustValue()) < 0) {
-                            log.error("Tried to send dust with ensureMinRequiredFee set - no way to complete this");
-                            return false;
-                        }
+                        if (output.getValue().compareTo(output.getMinNonDustValue()) < 0)
+                            throw new IllegalArgumentException("Tried to send dust with ensureMinRequiredFee set - no way to complete this");
                         needAtLeastReferenceFee = true;
                         break;
                     }
@@ -1860,13 +1842,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             if (!req.emptyWallet) {
                 // This can throw InsufficientMoneyException.
                 FeeCalculation feeCalculation;
-                try {
-                    feeCalculation = new FeeCalculation(req, value, originalInputs, needAtLeastReferenceFee, candidates);
-                } catch (InsufficientMoneyException e) {
-                    // TODO: Propagate this after 0.9 is released and stop returning a boolean.
-                    log.error("Insufficent money in wallet to pay the required fee");
-                    return false;
-                }
+                feeCalculation = new FeeCalculation(req, value, originalInputs, needAtLeastReferenceFee, candidates);
                 bestCoinSelection = feeCalculation.bestCoinSelection;
                 bestChangeOutput = feeCalculation.bestChangeOutput;
             } else {
@@ -1886,10 +1862,8 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 final BigInteger baseFee = req.fee == null ? BigInteger.ZERO : req.fee;
                 final BigInteger feePerKb = req.feePerKb == null ? BigInteger.ZERO : req.feePerKb;
                 Transaction tx = req.tx;
-                if (!adjustOutputDownwardsForFee(tx, bestCoinSelection, baseFee, feePerKb)) {
-                    log.error("Could not adjust output downwards to pay min fee.");
-                    return false;
-                }
+                if (!adjustOutputDownwardsForFee(tx, bestCoinSelection, baseFee, feePerKb))
+                    throw new InsufficientMoneyException.CouldNotAdjustDownwards();
             }
 
             totalInput = totalInput.add(bestCoinSelection.valueGathered);
@@ -1905,21 +1879,14 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             }
 
             // Now sign the inputs, thus proving that we are entitled to redeem the connected outputs.
-            try {
-                req.tx.signInputs(Transaction.SigHash.ALL, this, req.aesKey);
-            } catch (ScriptException e) {
-                // If this happens it means an output script in a wallet tx could not be understood. That should never
-                // happen, if it does it means the wallet has got into an inconsistent state.
-                throw new RuntimeException(e);
-            }
+            req.tx.signInputs(Transaction.SigHash.ALL, this, req.aesKey);
 
             // Check size.
             int size = req.tx.bitcoinSerialize().length;
             if (size > Transaction.MAX_STANDARD_TX_SIZE) {
-                // TODO: Throw an unchecked protocol exception here.
-                log.error("Transaction could not be created without exceeding max size: {} vs {}", size,
-                        Transaction.MAX_STANDARD_TX_SIZE);
-                return false;
+                throw new IllegalArgumentException(
+                        String.format("Transaction could not be created without exceeding max size: %d vs %d", size,
+                            Transaction.MAX_STANDARD_TX_SIZE));
             }
 
             // Label the transaction as being self created. We can use this later to spend its change output even before
@@ -1933,7 +1900,6 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             req.completed = true;
             req.fee = calculatedFee;
             log.info("  completed: {}", req.tx);
-            return true;
         } finally {
             lock.unlock();
         }
@@ -1977,6 +1943,11 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         }
     }
 
+    /**
+     * Returns all the outputs that match addresses or scripts added via {@link #addWatchedAddress(Address)} or
+     * {@link #addWatchedScripts(java.util.List)}.
+     * @param excludeImmatureCoinbases Whether to ignore outputs that are unspendable due to being immature.
+     */
     public LinkedList<TransactionOutput> getWatchedOutputs(boolean excludeImmatureCoinbases) {
         lock.lock();
         try {
@@ -2066,18 +2037,18 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
         return isWatchedScript(script);
     }
 
-    /** See {@link #addWatchedAddress(Address, long)} */
+    /**
+     * Same as {@link #addWatchedAddress(Address, long)} with the current time as the creation time.
+     */
     public boolean addWatchedAddress(final Address address) {
         long now = Utils.now().getTime() / 1000;
         return addWatchedAddresses(Lists.newArrayList(address), now) == 1;
     }
 
     /**
-     * Adds the given address to the wallet to be watched. Outputs can be retrieved
-     * by {@link #getWatchedOutputs(boolean)}.
+     * Adds the given address to the wallet to be watched. Outputs can be retrieved by {@link #getWatchedOutputs(boolean)}.
      *
      * @param creationTime creation time in seconds since the epoch, for scanning the blockchain
-     *
      * @return whether the address was added successfully (not already present)
      */
     public boolean addWatchedAddress(final Address address, long creationTime) {
@@ -2325,21 +2296,15 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 builder.append("\n");
             }
 
-            builder.append("\nWatched:\n");
-            for (Script script : watchedScripts) {
-                builder.append("  script:");
-                builder.append(script);
-                builder.append(" ");
-                if (script.isSentToAddress()) {
-                    try {
-                        builder.append("address: ");
-                        builder.append(script.getToAddress(params));
-                    } catch (ScriptException e) {
-                        builder.append("UNPARSEABLE");
-                    }
+            if (!watchedScripts.isEmpty()) {
+                builder.append("\nWatched scripts:\n");
+                for (Script script : watchedScripts) {
+                    builder.append("  ");
+                    builder.append(script.toString());
+                    builder.append("\n");
                 }
-                builder.append("\n");
             }
+
             if (includeTransactions) {
                 // Print the transactions themselves
                 if (unspent.size() > 0) {
@@ -2468,7 +2433,6 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                     Transaction tx = pair.tx;
                     final Sha256Hash txHash = tx.getHash();
                     if (tx.isCoinBase()) {
-                        log.warn("Coinbase tx {} -> dead", tx.getHash());
                         // All the transactions that we have in our wallet which spent this coinbase are now invalid
                         // and will never confirm. Hopefully this should never happen - that's the point of the maturity
                         // rule that forbids spending of coinbase transactions for 100 blocks.
@@ -2479,7 +2443,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                         // can do our best.
                         //
                         // TODO: Is it better to try and sometimes fail, or not try at all?
-                        killTx(null, null, tx);
+                        killCoinbase(tx);
                     } else {
                         for (TransactionOutput output : tx.getOutputs()) {
                             TransactionInput input = output.getSpentBy();
@@ -2605,17 +2569,13 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
     public long getEarliestKeyCreationTime() {
         lock.lock();
         try {
-            if (keychain.size() == 0) {
-                return Utils.now().getTime() / 1000;
-            }
             long earliestTime = Long.MAX_VALUE;
-            for (ECKey key : keychain) {
+            for (ECKey key : keychain)
                 earliestTime = Math.min(key.getCreationTimeSeconds(), earliestTime);
-            }
-
-            for (Script script : watchedScripts) {
+            for (Script script : watchedScripts)
                 earliestTime = Math.min(script.getCreationTimeSeconds(), earliestTime);
-            }
+            if (earliestTime == Long.MAX_VALUE)
+                return Utils.now().getTime() / 1000;
             return earliestTime;
         } finally {
             lock.unlock();
@@ -3376,7 +3336,7 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             // We keep track of the last size of the transaction we calculated but only if the act of adding inputs and
             // change resulted in the size crossing a 1000 byte boundary. Otherwise it stays at zero.
             int lastCalculatedSize = 0;
-            BigInteger valueNeeded;
+            BigInteger valueNeeded, valueMissing = null;
             while (true) {
                 resetTxInputs(req, originalInputs);
 
@@ -3399,8 +3359,10 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
                 CoinSelector selector = req.coinSelector == null ? coinSelector : req.coinSelector;
                 CoinSelection selection = selector.select(valueNeeded, candidates);
                 // Can we afford this?
-                if (selection.valueGathered.compareTo(valueNeeded) < 0)
+                if (selection.valueGathered.compareTo(valueNeeded) < 0) {
+                    valueMissing = valueNeeded.subtract(selection.valueGathered);
                     break;
+                }
                 checkState(selection.gathered.size() > 0 || originalInputs.size() > 0);
 
                 // We keep track of an upper bound on transaction size to calculate fees that need to be added.
@@ -3503,8 +3465,9 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             resetTxInputs(req, originalInputs);
 
             if (selection3 == null && selection2 == null && selection1 == null) {
-                log.warn("Insufficient value in wallet for send: needed {}", bitcoinValueToFriendlyString(valueNeeded));
-                throw new InsufficientMoneyException();
+                checkNotNull(valueMissing);
+                log.warn("Insufficient value in wallet for send: needed {} more", bitcoinValueToFriendlyString(valueMissing));
+                throw new InsufficientMoneyException(valueMissing);
             }
 
             BigInteger lowestFee = null;
@@ -3590,10 +3553,12 @@ public class Wallet implements Serializable, BlockChainListener, PeerFilterProvi
             // Now use it to upload any pending transactions we have that are marked as not being seen by any peers yet.
             for (Transaction tx : pending.values()) {
                 checkState(tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING);
-                if (tx.getConfidence().numBroadcastPeers() == 0) {
-                    log.info("New broadcaster so uploading waiting tx {}", tx.getHash());
-                    broadcaster.broadcastTransaction(tx);
-                }
+                // Re-broadcast even if it's marked as already seen for two reasons
+                // 1) Old wallets may have transactions marked as broadcast by 1 peer when in reality the network
+                //    never saw it, due to bugs.
+                // 2) It can't really hurt.
+                log.info("New broadcaster so uploading waiting tx {}", tx.getHash());
+                broadcaster.broadcastTransaction(tx);
             }
         } finally {
             lock.unlock();

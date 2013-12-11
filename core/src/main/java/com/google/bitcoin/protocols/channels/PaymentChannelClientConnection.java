@@ -17,10 +17,11 @@
 package com.google.bitcoin.protocols.channels;
 
 import com.google.bitcoin.core.ECKey;
+import com.google.bitcoin.core.InsufficientMoneyException;
 import com.google.bitcoin.core.Sha256Hash;
 import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.protocols.niowrapper.NioClient;
-import com.google.bitcoin.protocols.niowrapper.ProtobufParser;
+import com.google.bitcoin.net.NioClient;
+import com.google.bitcoin.net.ProtobufParser;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoin.paymentchannel.Protos;
@@ -76,7 +77,7 @@ public class PaymentChannelClientConnection {
             }
 
             @Override
-            public void channelOpen() {
+            public void channelOpen(boolean wasInitiated) {
                 wireParser.setSocketTimeout(0);
                 // Inform the API user that we're done and ready to roll.
                 channelOpenFuture.set(PaymentChannelClientConnection.this);
@@ -89,7 +90,7 @@ public class PaymentChannelClientConnection {
             public void messageReceived(ProtobufParser handler, Protos.TwoWayChannelMessage msg) {
                 try {
                     channelClient.receiveMessage(msg);
-                } catch (ValueOutOfRangeException e) {
+                } catch (InsufficientMoneyException e) {
                     // We should only get this exception during INITIATE, so channelOpen wasn't called yet.
                     channelOpenFuture.setException(e);
                 }

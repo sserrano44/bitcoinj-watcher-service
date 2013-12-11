@@ -16,10 +16,7 @@
 
 package com.google.bitcoin.core;
 
-import com.google.bitcoin.params.MainNetParams;
-import com.google.bitcoin.params.TestNet2Params;
-import com.google.bitcoin.params.TestNet3Params;
-import com.google.bitcoin.params.UnitTestParams;
+import com.google.bitcoin.params.*;
 import com.google.bitcoin.script.Script;
 import com.google.bitcoin.script.ScriptOpCodes;
 import com.google.common.base.Objects;
@@ -66,6 +63,7 @@ public abstract class NetworkParameters implements Serializable {
     protected int port;
     protected long packetMagic;
     protected int addressHeader;
+    protected int p2shHeader;
     protected int dumpedPrivateKeyHeader;
     protected int interval;
     protected int targetTimespan;
@@ -161,6 +159,12 @@ public abstract class NetworkParameters implements Serializable {
         return UnitTestParams.get();
     }
 
+    /** Returns a standard regression test params (similar to unitTests) */
+    @Deprecated
+    public static NetworkParameters regTests() {
+        return RegTestParams.get();
+    }
+
     /**
      * A Java package style string acting as unique ID for these parameters
      */
@@ -254,6 +258,13 @@ public abstract class NetworkParameters implements Serializable {
      */
     public int getAddressHeader() {
         return addressHeader;
+    }
+
+    /**
+     * First byte of a base58 encoded P2SH address.  P2SH addresses are defined as part of BIP0013.
+     */
+    public int getP2SHHeader() {
+        return p2shHeader;
     }
 
     /** First byte of a base58 encoded dumped private key. See {@link com.google.bitcoin.core.DumpedPrivateKey}. */
