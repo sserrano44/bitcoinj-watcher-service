@@ -1,5 +1,5 @@
-/**
- * Copyright 2011 Google Inc.
+/*
+ * Copyright 2013 Ken Sedgwick
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-package com.google.bitcoin.discovery;
+package com.google.bitcoin.crypto;
 
-public class PeerDiscoveryException extends Exception {
-    private static final long serialVersionUID = -2863411151549391392L;
-
-    public PeerDiscoveryException() {
-        super();
+/**
+ * Thrown when a list of MnemonicCode words fails the checksum check.
+ */
+@SuppressWarnings("serial")
+public class MnemonicChecksumException extends Exception {
+    public MnemonicChecksumException(String msg) {
+        super(msg);
     }
 
-    public PeerDiscoveryException(String message) {
-        super(message);
+    public MnemonicChecksumException(Exception e) {
+        super(e);
     }
 
-    public PeerDiscoveryException(Throwable arg0) {
-        super(arg0);
-    }
-
-    public PeerDiscoveryException(String message, Throwable arg0) {
-        super(message, arg0);
+    public MnemonicChecksumException(String msg, Exception e) {
+        super(msg, e);
     }
 }
