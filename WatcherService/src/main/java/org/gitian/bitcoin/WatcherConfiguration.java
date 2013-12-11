@@ -16,4 +16,11 @@ public class WatcherConfiguration extends Configuration {
     public String getFilePrefix() {
         return filePrefix;
     }
+
+    @JsonProperty
+    private int maxConnections = 0;
+
+    public int getMaxConnections() {
+        return maxConnections;
+    }
 }

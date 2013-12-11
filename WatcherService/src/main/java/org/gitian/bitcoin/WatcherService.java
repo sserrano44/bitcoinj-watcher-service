@@ -103,8 +103,12 @@ public class WatcherService extends Service<WatcherConfiguration> {
         InputStream checkpointsStream = WatcherService.class.getResourceAsStream("/watcherservice/checkpoints");
         kit.setCheckpoints(checkpointsStream);
 
+
         // Download the block chain and wait until it's done.
         kit.startAndWait();
+
+        if (configuration.getMaxConnections() > 0)
+            kit.peerGroup().setMaxConnections(configuration.getMaxConnections());
 
         environment.addResource(new AddressResource(kit.wallet()));
         environment.addResource(new TransactionResource(kit.peerGroup(), kit.wallet()));

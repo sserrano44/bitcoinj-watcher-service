@@ -14,3 +14,5 @@ logging:
 
     # Do not display log statements below this threshold to stdout.
     threshold: DEBUG
+
+maxConnections: 20
