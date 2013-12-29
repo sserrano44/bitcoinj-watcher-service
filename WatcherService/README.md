@@ -44,3 +44,7 @@ To change running port edit the config.yml and add:
         http:
           port: 6666
 
+To activate the IPN (Instant Payment Notification) add:
+
+        IPN: http://UrlToYourService.com/foo/bar
+

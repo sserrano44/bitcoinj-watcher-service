@@ -16,3 +16,5 @@ logging:
     threshold: DEBUG
 
 maxConnections: 20
+#IPN: "http://site.com/ipn_handler"
+

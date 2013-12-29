@@ -7,7 +7,6 @@ package org.gitian.bitcoin;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yammer.dropwizard.config.Configuration;
 
-import org.hibernate.validator.constraints.NotEmpty;
 
 public class WatcherConfiguration extends Configuration {
     @JsonProperty
@@ -20,7 +19,14 @@ public class WatcherConfiguration extends Configuration {
     @JsonProperty
     private int maxConnections = 0;
 
+    @JsonProperty
+    private String IPN = null;
+    
     public int getMaxConnections() {
         return maxConnections;
+    }
+    
+    public String getIPN() {
+        return IPN;
     }
 }

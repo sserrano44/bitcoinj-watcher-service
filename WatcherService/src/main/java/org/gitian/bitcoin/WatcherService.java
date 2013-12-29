@@ -16,6 +16,7 @@ package org.gitian.bitcoin;
  * limitations under the License.
  */
 
+import com.google.bitcoin.core.*;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.bitcoin.core.NetworkParameters;
 import com.google.bitcoin.kits.WalletAppKit;
@@ -31,9 +32,11 @@ import com.yammer.dropwizard.config.Environment;
 import org.gitian.bitcoin.resources.AddressResource;
 import org.gitian.bitcoin.resources.TransactionResource;
 
+import java.math.BigInteger;
 import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
+
 
 /**
  * ForwardingService demonstrates basic usage of the library. It sits on the network and when it receives coins, simply
@@ -113,5 +116,12 @@ public class WatcherService extends Service<WatcherConfiguration> {
         environment.addResource(new AddressResource(kit.wallet()));
         environment.addResource(new TransactionResource(kit.peerGroup(), kit.wallet()));
         environment.getObjectMapperFactory().enable(SerializationFeature.INDENT_OUTPUT);
+                
+        if (configuration.getIPN() != null) {
+        	//TODO: check is a valid URL
+            System.out.println("\n #### IPN ACTIVE: " + configuration.getIPN() + " \n");
+        	kit.wallet().addEventListener(new IPNWalletEventListener(configuration.getIPN()));
+        }
+        
     }
 }
